@@ -1,0 +1,25 @@
+@use '../settings/variables' as *;
+
+.miniCard-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    justify-content: center;
+    align-items: center;
+    padding: 0.85rem;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    background-color: $blue-2;
+}
+
+.miniCard-image {
+    max-height: 150px;
+    min-height: 150px;
+    max-width: 100px;
+    min-width: 100px;
+    border-radius: 6px;
+}
+
+.miniCard-text {
+    font-size: 18px;
+}

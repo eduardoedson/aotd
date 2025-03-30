@@ -1,0 +1,53 @@
+@use './variables' as *;
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+*::-webkit-scrollbar {
+    height: 10px;
+    width: 8px;
+    background: $background-color;
+}
+  
+*::-webkit-scrollbar-thumb {
+    background-color: $blue-2;
+}
+
+a {
+    color: $yellow;
+    text-decoration: none;
+}
+
+a:hover {
+    color: $orange;
+}
+
+.react-datepicker, .react-datepicker__today-button {
+    font-family: 'Roboto' !important;
+    border: 1px solid $pink !important;
+}
+
+.react-datepicker__day--selected, .react-datepicker__today-button {
+    background-color: $pink !important;
+    color: white !important;
+}
+
+.react-datepicker__day--keyboard-selected, .react-datepicker__day--today {
+    background-color: rgba(0, 0, 0, 0) !important;
+    font-weight: normal;
+}
+
+.react-datepicker__today-button {
+    padding: 10px 0 !important;
+    font-weight: lighter !important;
+}
+
+.react-datepicker__header, 
+.react-datepicker__current-month, 
+.react-datepicker__day-name {
+    background-color: $pink !important;
+    color: white !important;
+}

@@ -1,0 +1,54 @@
+@use '../settings/variables' as *;
+
+.navbar-container {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    background-color: $blue-2;
+    height: $navbar-size;
+    box-shadow: 0px 4px 4px 0px rgba(0, 0, 0, 0.45);
+
+    & > img {
+        margin: 0 2rem;
+        height: auto;
+        width: 6%;
+        cursor: pointer;
+    }
+}
+
+.navbar-menu-items {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    gap: 40px;
+}
+
+.navbar-menu-item {
+    font-size: 20px;
+    font-weight: bold;
+
+    & > a {
+        color: $orange !important;
+    }
+
+    & :hover {
+        cursor: pointer;
+        text-shadow: 0 0 3px black, 0 0 5px black; 
+    }
+}
+
+@media screen and (max-width: 767px) {
+    .navbar-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background-color: $blue-2;
+        height: 40px;
+        box-shadow: 0px 4px 4px 0px rgba(0, 0, 0, 0.45);
+    
+        & > img {
+            display: none;
+        }
+    }
+}
+    

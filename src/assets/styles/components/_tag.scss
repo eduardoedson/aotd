@@ -1,0 +1,11 @@
+@use '../settings/variables' as *;
+
+.tag-container {
+    font-size: 11px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    background-color: $blue-2;
+    padding: 5px 15px;
+    border-radius: 9px;
+    margin: 0.025rem;
+}

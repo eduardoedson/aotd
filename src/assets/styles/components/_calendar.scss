@@ -1,0 +1,49 @@
+@use '../settings/variables' as *;
+
+.calendar-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+}
+
+.calendar-controllers {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    gap: 70px;
+}
+
+.calendar-controller-selected {
+    border-style: none;
+    padding: 10px 16px;
+    border-radius: 6px;
+    font-size: 20px;
+    background-color: $pink;
+
+    &:hover {
+        cursor: pointer;
+    }
+}
+
+.calendar-controller-leftArrow, .calendar-controller-rightArrow {
+    max-height: 35px;
+    cursor: pointer;
+}
+
+@media screen and (max-width: 767px) {
+    .calendar-controllers {
+        gap: 40px;
+    }
+
+    .calendar-controller-selected {
+        font-size: 16px;
+    }
+
+    .calendar-controller-leftArrow, .calendar-controller-rightArrow {
+        max-height: 25px;
+    }
+}

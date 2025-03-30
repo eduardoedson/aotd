@@ -1,0 +1,11 @@
+@use '../settings/variables' as *;
+
+.infoBar-container {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    // background-color: $blue-2;
+    width: 100%;
+    height: $infobar-size;
+    // border-bottom: 2px solid rgba(0, 0, 0, 0.023);
+}

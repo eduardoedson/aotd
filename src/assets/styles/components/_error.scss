@@ -1,0 +1,35 @@
+@use '../settings/variables' as *;
+
+.errorCmp-container {
+    display: flex;
+    flex-direction: column-reverse;
+    justify-content: center;
+    align-items: center;
+    margin: 4rem;
+
+    & > img {
+        width: 25%;
+    }
+}
+
+.erroCmp-msg {
+    color: $purple;
+    font-weight: bold;
+    font-size: 28px;
+}
+
+@media screen and (max-width: 767px) {
+    .errorCmp-container {
+        margin: 1rem;
+    
+        & > img {
+            width: 80%;
+        }
+    }
+    
+    .erroCmp-msg {
+        color: $purple;
+        font-weight: bold;
+        font-size: 22px;
+    }
+}

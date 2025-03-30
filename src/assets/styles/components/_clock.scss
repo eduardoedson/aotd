@@ -1,0 +1,8 @@
+@use '../settings/variables' as *;
+
+.clock-container {
+    margin-right: 20px;
+    color: $orange;
+    font-size: 13px;
+    font-weight: bold;
+}

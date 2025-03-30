@@ -1,0 +1,75 @@
+@use './variables' as *;
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin: 0.5rem;
+  width: 100%;
+  max-width: 20rem;
+}
+
+label {
+  margin-bottom: 0.25em;
+  text-transform: uppercase;
+  font-size: 0.875em;
+  letter-spacing: 0.15em;
+  font-weight: bold;
+  color: white;
+  text-shadow: 0 0 1px black, 0 0 3px black; 
+}
+
+select {
+  /* Reset */
+  appearance: none;
+  border: 0;
+  outline: 0;
+  font: inherit;
+
+  /* Personalize */
+  max-width: 20rem;
+  padding: 1rem 4rem 1rem 1rem;
+  background: $select-arrow-icon no-repeat right 0.8em center / 1.4em,
+    linear-gradient(to left, rgba(255, 255, 255, 0.3) 3em, rgba(255, 255, 255, 0.2) 3em);
+  color: white;
+  border-radius: 0.25em;
+  box-shadow: 0 0 1em 0 rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+
+  /* Remove IE arrow */
+  &::-ms-expand {
+    display: none;
+  }
+
+  /* Remove focus outline */
+  &:focus {
+    outline: none;
+  }
+
+  /* <option> colors */
+  option {
+    background-color: $background-color;
+  }
+}
+
+input {
+  /* Reset */
+  appearance: none;
+  border: 0;
+  outline: 0;
+  font: inherit;
+
+  /* Personalize */
+  max-width: 20rem;
+  padding: 1rem 4rem 1rem 1rem;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 0.25em;
+  box-shadow: 0 0 1em 0 rgba(0, 0, 0, 0.3);
+  color: white;
+
+  /* Remove focus outline */
+  &:focus {
+    outline: none;
+  }
+}
+  

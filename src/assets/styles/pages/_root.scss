@@ -1,0 +1,11 @@
+@use '../settings/variables' as *;
+
+.root-container {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+.root-children-container {
+    min-height: calc(100vh - $infobar-size - $navbar-size - $footer-size); /* you have to minus header and footer width together*/
+}

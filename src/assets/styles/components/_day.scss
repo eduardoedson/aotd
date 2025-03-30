@@ -1,0 +1,33 @@
+.day-container {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 2.5rem;
+    justify-content: center;
+    padding: 3rem 15rem 0 15rem;
+}
+
+.day-provider-data {
+    display: flex;
+    gap: 4px;
+    width: 80%;
+    justify-content: flex-end;
+    font-size: 11px;
+    margin-top: 0.5rem;
+    margin-bottom: 2rem;
+}
+
+
+@media screen and (max-width: 767px) {
+    .day-container {
+        display: flex;
+        flex-direction: column;
+        padding: 0;
+        padding-top: 2rem;
+    }
+
+    .day-provider-data {
+        margin-top: 1rem;
+        margin-bottom: 1rem;
+    }
+}

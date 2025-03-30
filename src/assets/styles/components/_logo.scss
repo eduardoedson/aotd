@@ -1,0 +1,18 @@
+.logo-container {
+    display: flex;
+    justify-content: center;
+
+    & > img {
+        width: 30%;
+    }
+}
+
+@media screen and (max-width: 767px) {
+    .logo-container {
+        margin-top: 1.5rem;
+
+        & > img {
+            width: 45%;
+        }
+    }
+}
