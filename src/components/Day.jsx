@@ -38,7 +38,7 @@ function Day({ date }) {
     if (error) return <Error msg={error.message} />;
 
     const response = data?.Page.airingSchedules;
-    return <div className="day-container">{loading ? <LoadingDiv /> : response.map(item => { return <Card type='HOME' item={item} /> })}</div>;
+    return <div className="day-container">{loading ? <LoadingDiv /> : response.map(item => { return <Card type='HOME' item={item} date={date} /> })}</div>;
 }
   
 export default Day;

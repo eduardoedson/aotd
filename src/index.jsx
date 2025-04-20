@@ -4,7 +4,6 @@ import App from './App';
 import ErrorPage from './pages/Error';
 import Home from './pages/Home';
 import Detail from './pages/Detail';
-import Search from './pages/Search';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 
 import '../src/assets/styles/main.scss';
@@ -16,17 +15,13 @@ const router = createBrowserRouter([{
     children: [
       {
         index: true,
-        path: '/',
+        path: '/:date?',
         element: <Home />,
       },
       {
         exact: true,
-        path: ':id',
+        path: '/:date/:id',
         element: <Detail />,
-      },
-      {
-        path: 'search/:type?/:page?/:year?/:status?/:search?',
-        element: <Search />,
       },
       {
         path: '*',

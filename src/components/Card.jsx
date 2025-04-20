@@ -1,7 +1,6 @@
 import CardHome from './CardHome';
-import CardSearch from './CardSearch';
 
-function Card({ type, item }) {
+function Card({ type, item, date }) {
   switch (type) {
     case 'HOME':
       return <CardHome 
@@ -13,15 +12,7 @@ function Card({ type, item }) {
         description={item.media.description ? (item.media.description.length > 450 ? item.media.description.slice(0, 450) + '...' : item.media.description) : null}
         links={item.media.externalLinks}
         timeUntilAiring={item.timeUntilAiring}
-      />
-    case 'SEARCH':
-      return  <CardSearch 
-        id={item.id}
-        title={item.title.userPreferred}
-        description={item.description ? (item.description.length > 350 ? item.description.slice(0, 350) + '...' : item.description) : null}
-        imgSrc={item.coverImage.extraLarge}
-        color={item.coverImage.color}
-        genres={item.genres || []}
+        date={date}
       />
     default:
       return null
