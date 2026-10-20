@@ -7,7 +7,7 @@ import MiniCard from '../components/MiniCard';
 import Error from './Error';
 import Rating from '@mui/material/Rating';
 import Tooltip from '@mui/material/Tooltip';
-import { months, leftPad, capitalizeFirstLetter } from '../services/globals';
+import { months, leftPad, capitalizeFirstLetter, isValidDate } from '../services/globals';
 import { Link } from "react-router-dom";
 
 const GET_DATA = gql`
@@ -75,9 +75,19 @@ query ($id: Int) {
 }`;
 
 function Detail () {
-    const { id } = useParams();
-    const { loading, error, data } = useQuery(GET_DATA, { variables: { id } });
+    const { date, id } = useParams();
+    const numericId = Number(id);
+    const validId = Number.isInteger(numericId) && numericId > 0;
+    const validDate = isValidDate(date);
+    const { loading, error, data } = useQuery(GET_DATA, {
+        variables: { id: numericId },
+        skip: !validId || !validDate
+    });
     const isMobile = (window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth) <= 1400; 
+
+    if (!validDate) return <Error msg={'Invalid date. Use the YYYY-MM-DD format.'} />;
+
+    if (!validId) return <Error msg={'Invalid item ID!'} />;
 
     if (loading) return <LoadingDiv />;
 

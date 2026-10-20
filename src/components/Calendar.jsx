@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { getToday, weekDays, months } from '../services/globals';
+import { getToday, isValidDate, weekDays, months } from '../services/globals';
 import Loading from './Loading';
 import Day from './Day';
+import Error from './Error';
 import LeftArrow from '../assets/images/left_arrow.svg';
 import RightArrow from '../assets/images/right_arrow.svg';
 import DatePicker from 'react-datepicker';
@@ -19,30 +20,30 @@ function Calendar() {
 	const formatDate = () => {
 		if (selectedDate) {
 			const [year, month, day] = selectedDate.split('-');
-			const d = new Date(selectedDate);
-			const weekDay = weekDays[d.getDay()];
+			const d = new Date(`${selectedDate}T00:00:00.000Z`);
+			const weekDay = weekDays[d.getUTCDay()];
 			const monthText = months[parseInt(month) - 1];
 			setFormatedDate(`${weekDay}, ${day} ${monthText} ${year}`)
 		}
 	}
 
 	const advanceOneDay = () => {
-		const date = new Date(selectedDate);
-		date.setDate(date.getDate() + 1);
-		const year = date.getFullYear();
-		const month = String(date.getMonth() + 1).padStart(2, '0');
-		const day = String(date.getDate()).padStart(2, '0');
+		const date = new Date(`${selectedDate}T00:00:00.000Z`);
+		date.setUTCDate(date.getUTCDate() + 1);
+		const year = date.getUTCFullYear();
+		const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+		const day = String(date.getUTCDate()).padStart(2, '0');
 		const newDate = `${year}-${month}-${day}`;
 		setSelectedDate(newDate);
 		navigate(`/${newDate}`);
 	}
 
 	const backOneDay = () => {
-		const date = new Date(selectedDate);
-		date.setDate(date.getDate() - 1);
-		const year = date.getFullYear();
-		const month = String(date.getMonth() + 1).padStart(2, '0');
-		const day = String(date.getDate()).padStart(2, '0');
+		const date = new Date(`${selectedDate}T00:00:00.000Z`);
+		date.setUTCDate(date.getUTCDate() - 1);
+		const year = date.getUTCFullYear();
+		const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+		const day = String(date.getUTCDate()).padStart(2, '0');
 		const newDate = `${year}-${month}-${day}`;
 		setSelectedDate(newDate);
 		navigate(`/${newDate}`);
@@ -59,7 +60,7 @@ function Calendar() {
 
 	useEffect(() => {
 		if (date) {
-			setSelectedDate(date);
+			setSelectedDate(isValidDate(date) ? date : null);
 		} else {
 			const today = getToday();
 			setSelectedDate(today);
@@ -80,6 +81,10 @@ function Calendar() {
 		}
 	// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [formatedDate])
+
+	if (date && !isValidDate(date)) {
+		return <Error msg="Invalid date. Use the YYYY-MM-DD format." />;
+	}
 
 	return (
 		<div className="calendar-container">

@@ -4,12 +4,21 @@ function Timer({ timeLeft }) {
   const [time, setTime] = useState(timeLeft);
 
   useEffect(() => {
+      setTime(timeLeft);
+
       const timer = setInterval(() => {
-        setTime(prev => prev - 1);
+        setTime(prev => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            return 0;
+          }
+
+          return prev - 1;
+        });
       }, 1000);
 
       return () => { clearInterval(timer) };
-  }, [time]);
+  }, [timeLeft]);
 
   function formatTime(seconds) {
     const hours = Math.floor(seconds / 3600);
@@ -19,7 +28,7 @@ function Timer({ timeLeft }) {
     return `${hours.toString().padStart(2, '0')}h ${minutes.toString().padStart(2, '0')}m ${secondsRestantes.toString().padStart(2, '0')}s`;
   }
 
-  return <>{timeLeft <= 0 ? 'Released!' : formatTime(time)}</>;
+  return <>{time <= 0 ? 'Released!' : formatTime(time)}</>;
 }
 
 export default Timer;
