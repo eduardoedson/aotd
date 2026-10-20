@@ -14,6 +14,7 @@ const root = ReactDOM.createRoot(document.getElementById('root'));
 const router = createBrowserRouter([{
     path: '/',
     element: <App />,
+    errorElement: renderPage(<ErrorPage msg={'Unexpected application error.'} />),
     children: [
       {
         index: true,
