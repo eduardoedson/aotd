@@ -91,16 +91,20 @@ function Calendar() {
 			{loading ? <Loading /> :
 				<>
 					<div className="calendar-controllers">
-						<img src={LeftArrow} alt="Back one day" className="calendar-controller-leftArrow" onClick={backOneDay} />
+						<button type="button" className="calendar-controller-button" onClick={backOneDay} aria-label="Back one day">
+							<img src={LeftArrow} alt="" className="calendar-controller-leftArrow" />
+						</button>
 						<DatePicker
 							// closeOnScroll={true}
 							withPortal
 							fixedHeight
 							todayButton="Go To Today"
 							onSelect={changeDate}
-							customInput={<span className="calendar-controller-selected">{formatedDate}</span>}
+							customInput={<button type="button" className="calendar-controller-selected">{formatedDate}</button>}
 						/>
-						<img src={RightArrow} alt="Advance one day" className="calendar-controller-rightArrow" onClick={advanceOneDay} />
+						<button type="button" className="calendar-controller-button" onClick={advanceOneDay} aria-label="Advance one day">
+							<img src={RightArrow} alt="" className="calendar-controller-rightArrow" />
+						</button>
 					</div>
 					<Day date={selectedDate} />
 				</>

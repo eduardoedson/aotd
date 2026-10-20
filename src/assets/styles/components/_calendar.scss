@@ -29,9 +29,17 @@
     }
 }
 
+.calendar-controller-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 44px;
+    padding: 4px 10px;
+    background: transparent;
+}
+
 .calendar-controller-leftArrow, .calendar-controller-rightArrow {
     max-height: 35px;
-    cursor: pointer;
 }
 
 @media screen and (max-width: 767px) {

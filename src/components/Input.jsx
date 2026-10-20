@@ -1,13 +1,13 @@
 import Error from './Error';
 
 function Input ({ id, label, value, set, type, options, selectedOption, readOnly }) {
-    if (type.toUpperCase() === 'SELECT') {
+    if (type?.toUpperCase() === 'SELECT') {
         return (
             <div className='input-group'>
-                <label className='input-group-label' for={id}>{label}</label>
-                <select id={id} onChange={(event) => set(event.target.value)} readOnly={readOnly}>
+                <label className='input-group-label' htmlFor={id}>{label}</label>
+                <select id={id} onChange={(event) => set(event.target.value)} value={selectedOption} disabled={readOnly}>
                     {options.map(option => (
-                        <option value={option.value} selected={selectedOption === option.value}>
+                        <option key={option.value} value={option.value}>
                             {option.label}
                         </option>
                     ))}
@@ -16,10 +16,10 @@ function Input ({ id, label, value, set, type, options, selectedOption, readOnly
         )
     }
 
-    if (type.toUpperCase() === 'TEXT' || type.toUpperCase() === 'PASSWORD') {
+    if (type?.toUpperCase() === 'TEXT' || type?.toUpperCase() === 'PASSWORD') {
         return (
             <div className='input-group'>
-                <label className='input-group-label' for={id}>{label}</label>
+                <label className='input-group-label' htmlFor={id}>{label}</label>
                 <input 
                     id={id}
                     type={type}

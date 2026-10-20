@@ -15,6 +15,12 @@
   box-shadow: 0 10px 30px 5px rgba(0, 0, 0, 0.2);
   background-color: black;
 
+  .card-content {
+    position: absolute;
+    inset: 0;
+    color: inherit;
+  }
+
   .card-image {
     position: absolute;
     object-fit: cover;
@@ -66,6 +72,7 @@
     align-items: center;
     flex-wrap: wrap;
     bottom: 25px;
+    z-index: 2;
   }
 
   .card-subcontent-links {
@@ -82,19 +89,36 @@
     }
   }
 
-  &:hover .card-title {
+  &:hover .card-title, &:focus-within .card-title {
     opacity: 0;
     transition: opacity .3s ease-out;
   }
   
-  &:hover .card-description, &:hover .card-subcontent {
+  &:hover .card-description, &:hover .card-subcontent,
+  &:focus-within .card-description, &:focus-within .card-subcontent {
     opacity: 1;
     transition: opacity .5s .1s ease-in;
   }
   
-  &:hover .card-image {
+  &:hover .card-image, &:focus-within .card-image {
     transition: opacity .3s ease-in;
     opacity: 0.25;
+  }
+}
+
+@media (hover: none) {
+  .card {
+    .card-title {
+      opacity: 0;
+    }
+
+    .card-description, .card-subcontent {
+      opacity: 1;
+    }
+
+    .card-image {
+      opacity: 0.25;
+    }
   }
 }
 

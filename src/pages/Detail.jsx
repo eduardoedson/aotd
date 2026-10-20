@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useQuery, gql } from '@apollo/client';
 import { useParams } from 'react-router-dom';
 import LoadingDiv from '../components/Loading';
@@ -74,6 +74,21 @@ query ($id: Int) {
     }
 }`;
 
+const useMediaQuery = (query) => {
+    const [matches, setMatches] = useState(() => window.matchMedia(query).matches);
+
+    useEffect(() => {
+        const mediaQuery = window.matchMedia(query);
+        const updateMatch = (event) => setMatches(event.matches);
+
+        setMatches(mediaQuery.matches);
+        mediaQuery.addEventListener('change', updateMatch);
+        return () => mediaQuery.removeEventListener('change', updateMatch);
+    }, [query]);
+
+    return matches;
+};
+
 function Detail () {
     const { date, id } = useParams();
     const numericId = Number(id);
@@ -83,7 +98,7 @@ function Detail () {
         variables: { id: numericId },
         skip: !validId || !validDate
     });
-    const isMobile = (window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth) <= 1400; 
+    const isMobile = useMediaQuery('(max-width: 1400px)');
 
     if (!validDate) return <Error msg={'Invalid date. Use the YYYY-MM-DD format.'} />;
 
@@ -103,13 +118,16 @@ function Detail () {
     }
 
     const mountScreen = () => {
+        const withKeys = (children) => children
+            .filter(Boolean)
+            .map((child, index) => React.cloneElement(child, { key: child.key ?? index }));
         const main = (children) => <div className='detail-content'>{children}</div>;
         
-        const content = (children) =>  <div className='detail-split-content'>{children}</div>;
-        const left = (children) =>  <div className='detail-split-content-left'>{children}</div>;
-        const right = (children) =>  <div className='detail-split-content-right'>{children}</div>;
+        const content = (children) =>  <div className='detail-split-content'>{withKeys(children)}</div>;
+        const left = (children) =>  <div className='detail-split-content-left'>{withKeys(children)}</div>;
+        const right = (children) =>  <div className='detail-split-content-right'>{withKeys(children)}</div>;
 
-        const line = (children) => <div className='detail-category-line'>{children}</div>;
+        const line = (children) => <div className='detail-category-line'>{withKeys(children)}</div>;
 
         const preferredTitle = info.title?.userPreferred ?? 'Untitled';
         const coverImage = getSafeExternalUrl(info.coverImage?.extraLarge);
@@ -122,31 +140,31 @@ function Detail () {
         const alternativeTitles = Object.keys(info.title ?? {}).length > 0 ? <div className='detail-category'>
             <span className='detail-category-title'>Alternative Titles</span>
             <span className='detail-category-description'>
-                {Object.keys(info.title ?? {}).map(key => key !== 'userPreferred' && key !== '__typename' && info.title[key] ? <span>{info.title[key]}</span> : null)}
+                {Object.keys(info.title ?? {}).map(key => key !== 'userPreferred' && key !== '__typename' && info.title[key] ? <span key={key}>{info.title[key]}</span> : null)}
             </span>
         </div> : null;
         const synonyms = info.synonyms?.length > 0 ? <div className='detail-category'>
             <span className='detail-category-title'>Synonyms</span>
             <span className='detail-category-description'>
-                {info.synonyms.map(synonym => <span>{synonym}</span>)}
+                {info.synonyms.map(synonym => <span key={synonym}>{synonym}</span>)}
             </span>
         </div> : null;
         const genres = info.genres?.length > 0 ? <div className='detail-category'>
             <span className='detail-category-title'>Genres</span>
             <span className='detail-category-description-inline'>
-                {info.genres.map(genre => <Tag text={genre} />)}
+                {info.genres.map(genre => <Tag key={genre} text={genre} />)}
             </span>
         </div> : null;
         const tags = info.tags?.length > 0 ? <div className='detail-category'>
             <span className='detail-category-title'>Tags</span>
             <span className='detail-category-description-inline'>
-                {info.tags.map(tag => <Tag text={tag.name} />)}
+                {info.tags.map(tag => <Tag key={tag.name} text={tag.name} />)}
             </span>
         </div> : null;
         const studios = info.studios?.nodes?.length > 0 ? <div className='detail-category'>
             <span className='detail-category-title'>Studios</span>
             <span className='detail-category-description'>
-                {info.studios.nodes.map(studio => <span>{studio.name}</span>)}
+                {info.studios.nodes.map(studio => <span key={studio.name}>{studio.name}</span>)}
             </span>
         </div> : null;
         const safeLinks = (info.externalLinks ?? [])
@@ -198,15 +216,15 @@ function Detail () {
                 className='detail-trailer-iframe'
                 title={preferredTitle}
                 src={`https://www.youtube.com/embed/${trailerId}`}
-                frameborder='0'
-                allowfullscreen
+                frameBorder='0'
+                allowFullScreen
             >
             </iframe> 
         </div> : null;
         const characters = info.characters?.nodes?.length > 0 ? <div className='detail-characters'>
             <span className='detail-category-title'>Characters</span>
             <div className='detail-characters-list'>
-                {info.characters.nodes.map(char => <MiniCard image={char.image.medium} text={char.name.userPreferred} />)}
+                {info.characters.nodes.map(char => <MiniCard key={char.name.userPreferred} image={char.image.medium} text={char.name.userPreferred} />)}
             </div>
         </div> : null;
 
