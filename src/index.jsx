@@ -1,12 +1,14 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
-import ErrorPage from './pages/Error';
-import Home from './pages/Home';
-import Detail from './pages/Detail';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 
 import '../src/assets/styles/main.scss';
+
+const ErrorPage = lazy(() => import('./pages/Error'));
+const Home = lazy(() => import('./pages/Home'));
+const Detail = lazy(() => import('./pages/Detail'));
+const renderPage = (page) => <Suspense fallback={null}>{page}</Suspense>;
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 const router = createBrowserRouter([{
@@ -15,17 +17,19 @@ const router = createBrowserRouter([{
     children: [
       {
         index: true,
-        path: '/:date?',
-        element: <Home />,
+        element: renderPage(<Home />),
       },
       {
-        exact: true,
-        path: '/:date/:id',
-        element: <Detail />,
+        path: ':date',
+        element: renderPage(<Home />),
+      },
+      {
+        path: ':date/:id',
+        element: renderPage(<Detail />),
       },
       {
         path: '*',
-        element: <ErrorPage msg={'404 Page Not Found'} />,
+        element: renderPage(<ErrorPage msg={'404 Page Not Found'} />),
       }
     ],
 }]);
