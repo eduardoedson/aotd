@@ -46,6 +46,15 @@ export const isValidDate = (value) => {
     && date.getUTCDate() === day;
 }
 
+export const getSafeExternalUrl = (value) => {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' || url.protocol === 'http:' ? url.href : null;
+  } catch {
+    return null;
+  }
+}
+
 export const capitalizeFirstLetter = (str) => {
   return str.toLowerCase().replace(/\b\w/g, (match) => match.toUpperCase());
 }

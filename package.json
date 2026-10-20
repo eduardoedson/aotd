@@ -9,6 +9,7 @@
     "@fontsource/roboto": "^5.0.8",
     "@mui/material": "^5.15.6",
     "axios": "^1.5.1",
+    "dompurify": "^3.4.17",
     "graphql": "^16.8.1",
     "localforage": "^1.10.0",
     "match-sorter": "^6.3.3",

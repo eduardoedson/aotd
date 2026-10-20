@@ -42,7 +42,7 @@ function Day({ date }) {
 
     if (error) return <Error msg={error.message} />;
 
-    const response = data?.Page?.airingSchedules ?? [];
+    const response = (data?.Page?.airingSchedules ?? []).filter(item => item?.media?.id);
     return <div className="day-container">{loading ? <LoadingDiv /> : response.map(item => { return <Card key={`${item.media.id}-${item.episode}`} type='HOME' item={item} date={date} /> })}</div>;
 }
   
