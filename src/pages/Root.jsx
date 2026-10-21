@@ -2,8 +2,10 @@ import { Outlet, ScrollRestoration } from 'react-router-dom';
 import InfoBar from '../components/InfoBar';
 import Footer from '../components/Footer';
 import PrivacyPrompt from '../components/PrivacyPrompt';
+import { usePreferences } from '../services/preferences';
 
 function Root() {
+  usePreferences();
   return (
     <div className='root-container'>
       <a className='skip-link' href='#main-content'>

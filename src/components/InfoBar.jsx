@@ -1,5 +1,7 @@
 import Clock from './Clock';
+import { Link } from 'react-router-dom';
 import { setTimeZone, useTimeZone } from '../services/timezone';
+import { usePreferences } from '../services/preferences';
 
 function TimeZoneToggle() {
   const timeZone = useTimeZone();
@@ -29,8 +31,45 @@ function TimeZoneToggle() {
 }
 
 function InfoBar() {
+  const preferences = usePreferences();
   return (
     <div className='infoBar-container'>
+      <Link className='infoBar-library' to='/library'>
+        My library
+      </Link>
+      <div className='preferences-controls' aria-label='Display preferences'>
+        <button
+          type='button'
+          onClick={() =>
+            preferences.update({ theme: preferences.theme === 'dark' ? 'light' : 'dark' })
+          }
+          title='Toggle color theme'
+          aria-label='Toggle color theme'
+        >
+          {preferences.theme === 'dark' ? '☀' : '☾'}
+        </button>
+        <button
+          type='button'
+          onClick={() =>
+            preferences.update({
+              density: preferences.density === 'comfortable' ? 'compact' : 'comfortable',
+            })
+          }
+          title='Toggle card density'
+          aria-label='Toggle card density'
+        >
+          ▦
+        </button>
+        <button
+          type='button'
+          className={preferences.showAdult ? 'is-active' : ''}
+          onClick={() => preferences.update({ showAdult: !preferences.showAdult })}
+          aria-pressed={preferences.showAdult}
+          title='Show adult titles'
+        >
+          18+
+        </button>
+      </div>
       <TimeZoneToggle />
       <Clock />
     </div>

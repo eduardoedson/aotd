@@ -4,6 +4,7 @@ import Day from './Day';
 import WeekView from './WeekView';
 import Error from './Error';
 import ScheduleFilters from './ScheduleFilters';
+import ActiveFilterChips from './ActiveFilterChips';
 import LeftArrow from '../assets/images/left_arrow.svg';
 import RightArrow from '../assets/images/right_arrow.svg';
 import {
@@ -146,6 +147,7 @@ function Calendar() {
       ) : null}
 
       <ScheduleFilters filters={filters} />
+      <ActiveFilterChips filters={filters} />
 
       {isWeek ? (
         <WeekView

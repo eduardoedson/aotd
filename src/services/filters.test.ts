@@ -33,4 +33,15 @@ describe('matchesFilters', () => {
     expect(matchesFilters(item, filters({ favoritesOnly: true }), none)).toBe(false);
     expect(matchesFilters(item, filters({ favoritesOnly: true }), () => true)).toBe(true);
   });
+
+  it('filters by status and platform', () => {
+    const richItem = {
+      ...item,
+      media: { ...item.media, status: 'RELEASING', externalLinks: [{ site: 'Crunchyroll' }] },
+    } as AiringItem;
+    expect(matchesFilters(richItem, filters({ status: 'RELEASING' }), none)).toBe(true);
+    expect(matchesFilters(richItem, filters({ status: 'FINISHED' }), none)).toBe(false);
+    expect(matchesFilters(richItem, filters({ platform: 'Crunchyroll' }), none)).toBe(true);
+    expect(matchesFilters(richItem, filters({ platform: 'Netflix' }), none)).toBe(false);
+  });
 });

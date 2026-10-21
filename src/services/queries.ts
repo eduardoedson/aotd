@@ -16,6 +16,10 @@ export const SCHEDULE_QUERY = /* GraphQL */ `
           isAdult
           siteUrl
           duration
+          episodes
+          status
+          format
+          popularity
           genres
           description(asHtml: false)
           title {
@@ -24,6 +28,8 @@ export const SCHEDULE_QUERY = /* GraphQL */ `
             english
           }
           coverImage {
+            medium
+            large
             extraLarge
             color
           }
@@ -44,7 +50,42 @@ export const DETAIL_QUERY = /* GraphQL */ `
     Media(id: $id) {
       id
       type
+      format
       status
+      season
+      seasonYear
+      countryOfOrigin
+      meanScore
+      popularity
+      favourites
+      hashtag
+      isAdult
+      rankings {
+        id
+        rank
+        type
+        allTime
+        context
+        season
+        year
+      }
+      relations {
+        edges {
+          id
+          relationType(version: 2)
+          node {
+            id
+            type
+            format
+            title {
+              userPreferred
+            }
+            coverImage {
+              medium
+            }
+          }
+        }
+      }
       description
       siteUrl
       episodes
@@ -80,6 +121,8 @@ export const DETAIL_QUERY = /* GraphQL */ `
         site
       }
       coverImage {
+        medium
+        large
         extraLarge
         color
       }
@@ -113,6 +156,20 @@ export const DETAIL_QUERY = /* GraphQL */ `
   }
 `;
 
+export const EPISODE_QUERY = /* GraphQL */ `
+  query EpisodeAiring($mediaId: Int, $episode: Int) {
+    AiringSchedule(mediaId: $mediaId, episode: $episode) {
+      id
+      episode
+      airingAt
+    }
+  }
+`;
+
+export interface EpisodeResponse {
+  AiringSchedule: { id: number; episode: number; airingAt: number } | null;
+}
+
 export const FAVORITE_EPISODES_QUERY = /* GraphQL */ `
   query FavoriteNextEpisodes($ids: [Int], $perPage: Int) {
     Page(perPage: $perPage) {
@@ -145,10 +202,19 @@ export interface ScheduleMedia {
   isAdult: boolean;
   siteUrl: string | null;
   duration: number | null;
+  episodes: number | null;
+  status: string | null;
+  format?: string | null;
+  popularity?: number | null;
   genres: string[] | null;
   description: string | null;
   title: { userPreferred: string | null; romaji: string | null; english: string | null } | null;
-  coverImage: { extraLarge: string | null; color: string | null } | null;
+  coverImage: {
+    medium: string | null;
+    large: string | null;
+    extraLarge: string | null;
+    color: string | null;
+  } | null;
   externalLinks: ExternalLink[] | null;
 }
 
@@ -166,10 +232,43 @@ export interface ScheduleResponse {
   } | null;
 }
 
+export interface MediaRanking {
+  id: number;
+  rank: number;
+  type: 'RATED' | 'POPULAR';
+  allTime: boolean | null;
+  context: string;
+  season: string | null;
+  year: number | null;
+}
+
+export interface MediaRelation {
+  id: number;
+  relationType: string | null;
+  node: {
+    id: number;
+    type: 'ANIME' | 'MANGA' | null;
+    format: string | null;
+    title: { userPreferred: string | null } | null;
+    coverImage: { medium: string | null } | null;
+  } | null;
+}
+
 export interface MediaDetail {
   id: number;
   type: 'ANIME' | 'MANGA' | null;
+  format?: string | null;
   status: string | null;
+  season?: string | null;
+  seasonYear?: number | null;
+  countryOfOrigin?: string | null;
+  meanScore?: number | null;
+  popularity?: number | null;
+  favourites?: number | null;
+  hashtag?: string | null;
+  isAdult?: boolean | null;
+  rankings?: MediaRanking[] | null;
+  relations?: { edges: MediaRelation[] } | null;
   description: string | null;
   siteUrl: string | null;
   episodes: number | null;
@@ -189,7 +288,12 @@ export interface MediaDetail {
   endDate: { year: number | null; month: number | null; day: number | null } | null;
   nextAiringEpisode: { id: number; episode: number; airingAt: number } | null;
   trailer: { id: string | null; site: string | null } | null;
-  coverImage: { extraLarge: string | null; color: string | null } | null;
+  coverImage: {
+    medium: string | null;
+    large: string | null;
+    extraLarge: string | null;
+    color: string | null;
+  } | null;
   tags: { id: number; name: string }[] | null;
   characters: {
     nodes: {

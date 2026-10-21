@@ -1,0 +1,56 @@
+// Touch screens: every control gets at least a 44 by 44 px target (WCAG 2.5.5).
+@media (pointer: coarse) {
+  .favorite-button,
+  .calendar-add-button,
+  .share-button,
+  .watch-button,
+  .notify-toggle,
+  .card .card-action,
+  .card-subcontent-links a,
+  .week-item-favorite.favorite-button,
+  .preferences-controls button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .card .card-watch {
+    width: 44px;
+  }
+
+  .filters-chip,
+  .filters-clear,
+  .filters-input,
+  .filters-select,
+  .filter-chip,
+  .day-next,
+  .day-load-more,
+  .day-retry,
+  .calendar-today,
+  .calendar-view-toggle button,
+  .timezone-toggle button,
+  .week-tab,
+  .detail-back,
+  .footer-link-button,
+  .privacy-prompt-actions button,
+  .calendar-menu-list a,
+  .calendar-menu-list button {
+    min-height: 44px;
+  }
+
+  .detail-back,
+  .footer-link-button,
+  .calendar-today,
+  .infoBar-library {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .infoBar-library {
+    min-height: 44px;
+  }
+
+  .filter-chip-remove {
+    width: 28px;
+    height: 28px;
+  }
+}

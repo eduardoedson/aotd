@@ -1,10 +1,14 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import FavoriteButton from './FavoriteButton';
 import Error from './Error';
 import { useSchedule } from '../services/schedule';
 import { useFavorites } from '../services/favorites';
-import { matchesFilters } from '../services/filters';
+import { matchesFilters, sortItems } from '../services/filters';
+import { usePreferences } from '../services/preferences';
+import { accentFor } from '../services/color';
+import { setScheduleContext } from '../services/navigation';
+import { prefetchIntent } from '../services/prefetch';
 import {
   formatAiringTime,
   formatShortDate,
@@ -17,36 +21,88 @@ import {
   toIsoDateInZone,
 } from '../services/globals';
 
-const NO_FILTERS = { query: '', genre: '', favoritesOnly: false, active: false };
+const NO_FILTERS = {
+  query: '',
+  genre: '',
+  favoritesOnly: false,
+  status: '',
+  platform: '',
+  time: '',
+  sort: 'time',
+  active: false,
+};
 
 // Seven columns, one per day, loaded with a single paginated range query.
+// On phones the columns turn into day tabs that show one day at a time.
 function WeekView({ date, timeZone = 'utc', filters = NO_FILTERS }) {
   const { search } = useLocation();
   const days = getWeekDays(date);
   const range = getRange(getWeekStart(date), 7, timeZone);
   const { items, error, loading, retry } = useSchedule(range, { loadAll: true });
   const { isFavorite } = useFavorites();
+  const preferences = usePreferences();
   const today = getToday(timeZone);
+  const [selectedDay, setSelectedDay] = useState(() =>
+    days.includes(today) ? today : days.includes(date) ? date : days[0],
+  );
   const daySearch = useMemo(() => {
     const params = new URLSearchParams(search);
     params.delete('view');
+    params.delete('ep');
     const value = params.toString();
     return value ? `?${value}` : '';
   }, [search]);
 
-  const { query, genre, favoritesOnly } = filters;
+  const { query, genre, favoritesOnly, status, platform, time, sort } = filters;
   const byDay = useMemo(() => {
     const groups = Object.fromEntries(days.map((day) => [day, []]));
-    items
-      .filter((item) => matchesFilters(item, { query, genre, favoritesOnly }, isFavorite))
-      .forEach((item) => {
-        const day = toIsoDateInZone(new Date(item.airingAt * 1000), timeZone);
-        groups[day]?.push(item);
-      });
+    sortItems(
+      items
+        .filter((item) => preferences.showAdult || !item.media.isAdult)
+        .filter((item) =>
+          matchesFilters(item, { query, genre, favoritesOnly, status, platform, time }, isFavorite),
+        ),
+      sort,
+    ).forEach((item) => {
+      const day = toIsoDateInZone(new Date(item.airingAt * 1000), timeZone);
+      groups[day]?.push(item);
+    });
     return groups;
     // days is derived from date, which is part of the component key.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, query, genre, favoritesOnly, isFavorite, timeZone]);
+  }, [
+    items,
+    query,
+    genre,
+    favoritesOnly,
+    status,
+    platform,
+    time,
+    sort,
+    isFavorite,
+    timeZone,
+    preferences.showAdult,
+  ]);
+
+  // Previous and next on the detail page follow the week in order.
+  useEffect(() => {
+    if (loading) return;
+    setScheduleContext({
+      search: daySearch,
+      entries: days.flatMap((day) =>
+        byDay[day].map((item) => ({
+          mediaId: item.media.id,
+          title: item.media.title?.userPreferred ?? 'Untitled',
+          date: day,
+          episode: item.episode,
+        })),
+      ),
+    });
+    // days is derived from date, which is part of the component key.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [byDay, daySearch, loading]);
+
+  const allowedCount = items.filter((item) => preferences.showAdult || !item.media.isAdult).length;
 
   if (error && items.length === 0) {
     return (
@@ -63,11 +119,32 @@ function WeekView({ date, timeZone = 'utc', filters = NO_FILTERS }) {
       <p className='day-summary' aria-live='polite'>
         {loading
           ? `Loading the week… ${items.length} episodes so far`
-          : `${items.length} episodes this week`}
+          : `${allowedCount} episodes this week`}
       </p>
+
+      <div className='week-tabs' role='tablist' aria-label='Day of the week'>
+        {days.map((day) => (
+          <button
+            key={day}
+            type='button'
+            role='tab'
+            aria-selected={day === selectedDay}
+            className={`week-tab${day === selectedDay ? ' is-selected' : ''}${day === today ? ' is-today' : ''}`}
+            onClick={() => setSelectedDay(day)}
+          >
+            <span>{formatWeekDayShort(day)}</span>
+            <strong>{formatShortDate(day).split(' ')[1]}</strong>
+            <small>{byDay[day].length}</small>
+          </button>
+        ))}
+      </div>
+
       <div className='week-grid'>
         {days.map((day) => (
-          <div key={day} className={`week-column${day === today ? ' is-today' : ''}`}>
+          <div
+            key={day}
+            className={`week-column${day === today ? ' is-today' : ''}${day === selectedDay ? ' is-selected' : ''}`}
+          >
             <Link className='week-column-header' to={`/${day}${daySearch}`}>
               <span>{formatWeekDayShort(day)}</span>
               <strong>{formatShortDate(day)}</strong>
@@ -80,7 +157,9 @@ function WeekView({ date, timeZone = 'utc', filters = NO_FILTERS }) {
                   <li
                     key={item.id}
                     className='week-item'
-                    style={{ '--card-accent': item.media.coverImage?.color || '#ff3d8d' }}
+                    style={{
+                      '--card-accent': accentFor(item.media.coverImage?.color, preferences.theme),
+                    }}
                   >
                     <time
                       className='week-item-time'
@@ -88,9 +167,16 @@ function WeekView({ date, timeZone = 'utc', filters = NO_FILTERS }) {
                     >
                       {formatAiringTime(item.airingAt, timeZone)}
                     </time>
-                    <Link className='week-item-link' to={`/${day}/${item.media.id}${daySearch}`}>
+                    <Link
+                      className='week-item-link'
+                      to={`/${day}/${item.media.id}${daySearch}`}
+                      {...prefetchIntent(item.media.id)}
+                    >
                       <span className='week-item-title'>{title}</span>
-                      <span className='week-item-episode'>Ep {item.episode}</span>
+                      <span className='week-item-episode'>
+                        Ep {item.episode}
+                        {item.episode === 1 ? <span className='badge badge-new'>New</span> : null}
+                      </span>
                     </Link>
                     <FavoriteButton
                       className='week-item-favorite'

@@ -116,6 +116,19 @@ export async function mockAnilist(page: Page) {
         },
       });
     }
+    if (name === 'EpisodeAiring') {
+      return route.fulfill({
+        json: {
+          data: {
+            AiringSchedule: {
+              id: 1,
+              episode: variables.episode,
+              airingAt: Math.floor(Date.now() / 1000) + 7200,
+            },
+          },
+        },
+      });
+    }
     if (name === 'MediaDetail') {
       return route.fulfill({ json: { data: { Media: mediaDetail(variables.id, Date.now()) } } });
     }

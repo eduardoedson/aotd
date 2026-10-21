@@ -1,7 +1,7 @@
 import { useEffect, useSyncExternalStore } from 'react';
 import { anilistRequest } from './anilist';
 import { createStorageStore } from './storage';
-import { favoritesStore, getFavoriteIds, getFavorites } from './favorites';
+import { favoritesStore, getNotifyIds } from './favorites';
 import { toIsoDateInZone } from './globals';
 import { getTimeZone } from './timezone';
 import { FAVORITE_EPISODES_QUERY, type FavoriteEpisodesResponse } from './queries';
@@ -86,7 +86,7 @@ export async function enableNotifications() {
   notifySettingStore.set(permission === 'granted');
   emitPermissionChange();
   if (permission === 'granted' && isPushSupported()) {
-    await subscribeToPush(getFavoriteIds());
+    await subscribeToPush(getNotifyIds());
   }
   return permission;
 }
@@ -123,12 +123,12 @@ async function showNotification(
 // Notifies about tracked episodes of favorites whose airing time has passed.
 export function checkReleases(now = Date.now(), notify: Notify = showNotification) {
   const tracker = releaseTrackerStore.get() ?? {};
-  const favorites = getFavorites();
+  const notifyIds = new Set(getNotifyIds().map(String));
   let changed = false;
   const next: ReleaseTracker = { ...tracker };
 
   Object.entries(tracker).forEach(([id, entry]) => {
-    if (!favorites[id] || entry.notified || entry.airingAt * 1000 > now) return;
+    if (!notifyIds.has(id) || entry.notified || entry.airingAt * 1000 > now) return;
     if (now - entry.airingAt * 1000 <= MAX_LATE_NOTIFICATION_MS) {
       const date = toIsoDateInZone(new Date(entry.airingAt * 1000), getTimeZone());
       notify(entry.title, {
@@ -161,7 +161,7 @@ export async function refreshReleaseTracker(
   now = Date.now(),
   notify: Notify = showNotification,
 ) {
-  const ids = getFavoriteIds();
+  const ids = getNotifyIds();
   checkReleases(now, notify);
   if (ids.length === 0) return;
 
@@ -208,7 +208,7 @@ export function useReleaseNotifications() {
   useEffect(() => {
     if (mode !== 'push') return undefined;
     const timer = setTimeout(() => {
-      syncPushFavorites(getFavoriteIds()).catch(() => {});
+      syncPushFavorites(getNotifyIds()).catch(() => {});
     }, PUSH_SYNC_DELAY_MS);
     return () => clearTimeout(timer);
   }, [mode, favorites]);

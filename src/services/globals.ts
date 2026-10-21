@@ -222,3 +222,27 @@ export function formatTime(totalSeconds: number) {
 
   return days > 0 ? `${days}d ${clock}` : clock;
 }
+
+interface LinkLike {
+  id?: number;
+  site: string;
+  url: string;
+  icon?: string | null;
+}
+
+// Keeps one link per site with a safe URL and icon, so a card never shows the
+// same platform twice. Icon URLs are normalized so the browser reuses its cache.
+export function uniqueLinks<T extends LinkLike>(links: T[] | null | undefined, max = 6) {
+  const seen = new Set<string>();
+  const result: (T & { url: string; icon: string })[] = [];
+  for (const link of links ?? []) {
+    const url = getSafeExternalUrl(link.url);
+    const icon = getSafeExternalUrl(link.icon);
+    const site = link.site?.trim().toLowerCase();
+    if (!url || !icon || !site || seen.has(site)) continue;
+    seen.add(site);
+    result.push({ ...link, url, icon: icon.replace(/[?#].*$/, '') });
+    if (result.length >= max) break;
+  }
+  return result;
+}

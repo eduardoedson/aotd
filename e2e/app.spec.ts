@@ -93,3 +93,46 @@ test('asks for cookie consent before loading analytics', async ({ browser }) => 
   await expect.poll(() => analyticsRequests.length).toBeGreaterThan(0);
   await context.close();
 });
+
+test('week view shows one day at a time on phones', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile', 'Mobile layout only');
+  await mockAnilist(page);
+  await page.goto(`/${today()}?view=week`);
+
+  const tabs = page.getByRole('tab');
+  await expect(tabs).toHaveCount(7);
+  await expect(page.locator('.week-column:visible')).toHaveCount(1);
+
+  await tabs.nth(0).click();
+  await expect(tabs.nth(0)).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('.week-column:visible')).toHaveCount(1);
+});
+
+test('touch targets are at least 44px on phones', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile', 'Mobile layout only');
+  await mockAnilist(page);
+  await page.goto(`/${today()}`);
+  await page.locator('article.card-container').first().waitFor();
+
+  for (const selector of [
+    '.card-favorite',
+    '.card-watch',
+    '.filters-chip',
+    '.calendar-view-toggle button',
+  ]) {
+    const box = await page.locator(selector).first().boundingBox();
+    expect(box?.height, selector).toBeGreaterThanOrEqual(44);
+    expect(box?.width, selector).toBeGreaterThanOrEqual(44);
+  }
+});
+
+test('active filters show as removable chips', async ({ page }) => {
+  await mockAnilist(page);
+  await page.goto(`/${today()}?genre=Action&sort=popularity`);
+
+  const chips = page.getByRole('list', { name: 'Active filters' });
+  await expect(chips.getByRole('button', { name: 'Remove filter Action' })).toBeVisible();
+  await chips.getByRole('button', { name: 'Remove filter Action' }).click();
+  await expect(page).not.toHaveURL(/genre=/);
+  await expect(page).toHaveURL(/sort=popularity/);
+});

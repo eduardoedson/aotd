@@ -15,6 +15,35 @@
   z-index: 10;
 }
 
+.infoBar-library {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.infoBar-library:hover {
+  color: #fff;
+}
+.preferences-controls {
+  display: flex;
+  gap: 0.3rem;
+}
+.preferences-controls button {
+  min-width: 34px;
+  height: 34px;
+  padding: 0 0.55rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: none;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 12px;
+}
+.preferences-controls button.is-active {
+  border-color: rgba($pink, 0.55);
+  color: $pink;
+}
+
 @media screen and (max-width: 520px) {
   .infoBar-container {
     justify-content: space-between;

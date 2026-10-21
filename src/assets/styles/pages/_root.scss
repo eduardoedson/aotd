@@ -11,3 +11,97 @@
 .root-children-container {
   min-height: calc(100vh - $infobar-size - $footer-size);
 }
+
+.library-page {
+  width: min(1180px, 100%);
+  min-height: 80vh;
+  margin: 0 auto;
+  padding: clamp(2rem, 6vw, 5rem) 1.5rem;
+}
+.library-header {
+  max-width: 700px;
+  margin-bottom: 3rem;
+}
+.library-header > a {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 13px;
+  text-decoration: none;
+}
+.library-header > span {
+  display: block;
+  margin-top: 2.5rem;
+  color: $pink;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+.library-header h1 {
+  margin: 0.5rem 0;
+  color: #fff;
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
+  letter-spacing: -0.05em;
+}
+.library-header p,
+.library-empty {
+  color: rgba(255, 255, 255, 0.58);
+  line-height: 1.6;
+}
+.library-page section {
+  margin-top: 3rem;
+}
+.library-page h2 {
+  color: #fff;
+  font-size: 20px;
+}
+.library-page h2 span {
+  color: $pink;
+  font-size: 12px;
+  vertical-align: super;
+}
+.library-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+}
+.library-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-height: 104px;
+  padding: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.035);
+  color: #fff;
+  text-decoration: none;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease;
+}
+.library-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba($pink, 0.4);
+}
+.library-card img,
+.library-placeholder {
+  width: 58px;
+  height: 82px;
+  flex: 0 0 auto;
+  object-fit: cover;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.06);
+}
+.library-card span {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.library-card strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.library-card small {
+  color: rgba(255, 255, 255, 0.5);
+  line-height: 1.4;
+}

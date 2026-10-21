@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import CardHome from './CardHome';
 import SkeletonCard from './SkeletonCard';
@@ -7,26 +7,70 @@ import Error from './Error';
 import NextEpisodeJump from './NextEpisodeJump';
 import { useDaySchedule } from '../services/schedule';
 import { useFavorites } from '../services/favorites';
-import { matchesFilters } from '../services/filters';
+import { matchesFilters, sortItems } from '../services/filters';
+import { scheduleSearch, setScheduleContext } from '../services/navigation';
 import { useInfiniteScroll } from '../services/useInfiniteScroll';
 import { formatLongDate, getToday } from '../services/globals';
+import { usePreferences } from '../services/preferences';
 
-const NO_FILTERS = { query: '', genre: '', favoritesOnly: false, active: false };
+const NO_FILTERS = {
+  query: '',
+  genre: '',
+  favoritesOnly: false,
+  status: '',
+  platform: '',
+  time: '',
+  sort: 'time',
+  active: false,
+};
 const SKELETON_COUNT = 8;
+// Cards above the fold load their images eagerly.
+const PRIORITY_CARDS = 4;
 
 function Day({ date, timeZone = 'utc', filters = NO_FILTERS }) {
   const { search } = useLocation();
+  // Sorting alone does not need every page; any real filter does.
+  const filtering =
+    Boolean(filters.query || filters.genre || filters.favoritesOnly) ||
+    Boolean(filters.status || filters.platform || filters.time);
   const { items, error, hasNextPage, loading, initialLoading, loadMore, retry } = useDaySchedule(
     date,
     timeZone,
+    { loadAll: filtering },
   );
   const { isFavorite } = useFavorites();
+  const preferences = usePreferences();
 
-  const { query, genre, favoritesOnly } = filters;
-  const visibleItems = useMemo(
-    () => items.filter((item) => matchesFilters(item, { query, genre, favoritesOnly }, isFavorite)),
-    [items, query, genre, favoritesOnly, isFavorite],
+  const { query, genre, favoritesOnly, status, platform, time, sort } = filters;
+  // Adult titles only count when the visitor chose to see them.
+  const allowedItems = useMemo(
+    () => items.filter((item) => preferences.showAdult || !item.media.isAdult),
+    [items, preferences.showAdult],
   );
+  const visibleItems = useMemo(
+    () =>
+      sortItems(
+        allowedItems.filter((item) =>
+          matchesFilters(item, { query, genre, favoritesOnly, status, platform, time }, isFavorite),
+        ),
+        sort,
+      ),
+    [allowedItems, query, genre, favoritesOnly, status, platform, time, sort, isFavorite],
+  );
+
+  // The detail page uses this order for its previous and next links.
+  useEffect(() => {
+    if (visibleItems.length === 0) return;
+    setScheduleContext({
+      search: scheduleSearch(search),
+      entries: visibleItems.map((item) => ({
+        mediaId: item.media.id,
+        title: item.media.title?.userPreferred ?? 'Untitled',
+        date,
+        episode: item.episode,
+      })),
+    });
+  }, [visibleItems, date, search]);
 
   const sentinelRef = useInfiniteScroll({
     onLoadMore: loadMore,
@@ -58,7 +102,7 @@ function Day({ date, timeZone = 'utc', filters = NO_FILTERS }) {
   }
 
   const finished = !hasNextPage && !loading;
-  const countLabel = `${items.length}${hasNextPage ? '+' : ''} episode${items.length === 1 ? '' : 's'}`;
+  const countLabel = `${allowedItems.length}${hasNextPage ? '+' : ''} episode${allowedItems.length === 1 ? '' : 's'}`;
   const summary = filters.active
     ? `${visibleItems.length} of ${countLabel} match your filters`
     : `${countLabel} airing on this day`;
@@ -74,8 +118,15 @@ function Day({ date, timeZone = 'utc', filters = NO_FILTERS }) {
 
       {visibleItems.length > 0 ? (
         <div className='day-container'>
-          {visibleItems.map((item) => (
-            <CardHome key={item.id} item={item} date={date} search={search} timeZone={timeZone} />
+          {visibleItems.map((item, index) => (
+            <CardHome
+              key={item.id}
+              item={item}
+              date={date}
+              search={scheduleSearch(search)}
+              timeZone={timeZone}
+              priority={index < PRIORITY_CARDS}
+            />
           ))}
         </div>
       ) : null}

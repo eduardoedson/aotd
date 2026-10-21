@@ -79,6 +79,21 @@ export function buildEpisodeIcs({
   return `${lines.map(foldLine).join('\r\n')}\r\n`;
 }
 
+const googleDate = (date: Date) => toIcsDate(date);
+
+// Link that opens Google Calendar with the event already filled in.
+export function buildGoogleCalendarUrl({ title, episode, airingAt, duration, url }: EpisodeEvent) {
+  const start = new Date(airingAt * 1000);
+  const end = new Date(start.getTime() + (duration || DEFAULT_DURATION_MINUTES) * 60 * 1000);
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: `${title} - Episode ${episode}`,
+    dates: `${googleDate(start)}/${googleDate(end)}`,
+    details: `Episode ${episode} of ${title} airs now.${url ? `\n${url}` : ''}`,
+  });
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
+}
+
 export function downloadEpisodeIcs(event: EpisodeEvent) {
   const blob = new Blob([buildEpisodeIcs(event)], { type: 'text/calendar;charset=utf-8' });
   const objectUrl = URL.createObjectURL(blob);

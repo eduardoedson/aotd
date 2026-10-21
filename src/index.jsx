@@ -20,6 +20,7 @@ initConsent();
 
 const Home = lazy(() => import('./pages/Home'));
 const Detail = lazy(() => import('./pages/Detail'));
+const Library = lazy(() => import('./pages/Library'));
 
 const renderPage = (page) => <Suspense fallback={<Loading />}>{page}</Suspense>;
 
@@ -32,6 +33,7 @@ const router = createBrowserRouter([
       { index: true, element: <RedirectToToday /> },
       { path: ':date', element: renderPage(<Home />) },
       { path: ':date/:id', element: renderPage(<Detail />) },
+      { path: 'library', element: renderPage(<Library />) },
       { path: '*', element: <ErrorPage msg='404 Page Not Found' /> },
     ],
   },

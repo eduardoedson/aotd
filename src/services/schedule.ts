@@ -1,5 +1,7 @@
 import { useEffect, useReducer } from 'react';
 import { anilistRequest } from './anilist';
+import { readPersistent, writePersistent } from './persistentCache';
+import { canPrefetch } from './prefetch';
 import { getRange, shiftIsoDate, type TimeZoneMode, type UnixRange } from './globals';
 import { SCHEDULE_QUERY, type AiringItem, type ScheduleResponse } from './queries';
 
@@ -24,22 +26,45 @@ export const clearScheduleCache = () => {
 
 const rangeKey = ({ start, end }: UnixRange) => `${start}:${end}`;
 
+// Persisted pages are reused for the same 10 minutes after a reload, and kept
+// for a day as an offline fallback.
+const PERSIST_FALLBACK_MS = 24 * 60 * 60 * 1000;
+
+const toResult = (data: ScheduleResponse): PageResult => ({
+  // Adult titles are kept here and hidden by the components, which know the
+  // visitor's "show adult titles" preference.
+  items: (data?.Page?.airingSchedules ?? []).filter((item): item is AiringItem =>
+    Boolean(item?.media?.id),
+  ),
+  hasNextPage: Boolean(data?.Page?.pageInfo?.hasNextPage),
+});
+
 export function fetchSchedulePage(range: UnixRange, page: number): Promise<PageResult> {
   const key = `${rangeKey(range)}:${page}`;
   const cached = pageCache.get(key);
   if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) return cached.promise;
 
-  const promise = anilistRequest<ScheduleResponse>(SCHEDULE_QUERY, {
-    start: range.start,
-    end: range.end,
-    page,
-    perPage: PER_PAGE,
-  }).then((data) => ({
-    items: (data?.Page?.airingSchedules ?? []).filter(
-      (item): item is AiringItem => Boolean(item?.media?.id) && !item?.media.isAdult,
-    ),
-    hasNextPage: Boolean(data?.Page?.pageInfo?.hasNextPage),
-  }));
+  const storageKey = `schedule:${key}`;
+  const persisted = readPersistent<PageResult>(storageKey, CACHE_TTL_MS);
+  const promise = persisted
+    ? Promise.resolve(persisted)
+    : anilistRequest<ScheduleResponse>(SCHEDULE_QUERY, {
+        start: range.start,
+        end: range.end,
+        page,
+        perPage: PER_PAGE,
+      }).then(
+        (data) => {
+          const result = toResult(data);
+          writePersistent(storageKey, result);
+          return result;
+        },
+        (error: unknown) => {
+          const fallback = readPersistent<PageResult>(storageKey, PERSIST_FALLBACK_MS);
+          if (fallback) return fallback;
+          throw error;
+        },
+      );
 
   pageCache.set(key, { promise, fetchedAt: Date.now() });
   promise.catch(() => pageCache.delete(key));
@@ -139,17 +164,21 @@ export function useSchedule(range: UnixRange, { loadAll = false }: ScheduleOptio
   };
 }
 
-export function useDaySchedule(date: string, timeZone: TimeZoneMode) {
+// With filters active every page is loaded, so the matches cover the whole day.
+export function useDaySchedule(date: string, timeZone: TimeZoneMode, { loadAll = false } = {}) {
   const range = getRange(date, 1, timeZone);
-  const schedule = useSchedule(range);
+  const schedule = useSchedule(range, { loadAll });
 
   // Warm the cache for the neighbouring days once the first page is visible.
   const firstPageLoaded = schedule.items.length > 0 || !schedule.hasNextPage;
   useEffect(() => {
     if (!firstPageLoaded) return;
-    [-1, 1].forEach((offset) => {
-      fetchSchedulePage(getRange(shiftIsoDate(date, offset), 1, timeZone), 1).catch(() => {});
-    });
+    // Selective preload: only on fast, unmetered connections. The next day is the
+    // most likely destination; the previous one is fetched after it.
+    if (!canPrefetch()) return;
+    fetchSchedulePage(getRange(shiftIsoDate(date, 1), 1, timeZone), 1)
+      .then(() => fetchSchedulePage(getRange(shiftIsoDate(date, -1), 1, timeZone), 1))
+      .catch(() => {});
   }, [date, timeZone, firstPageLoaded]);
 
   return schedule;

@@ -50,6 +50,15 @@
     z-index: 3;
   }
 
+  .card-watch {
+    position: absolute;
+    top: 0.85rem;
+    left: 0.85rem;
+    z-index: 3;
+    width: 38px;
+    padding: 0;
+  }
+
   .card-content {
     position: absolute;
     inset: 0;
@@ -300,6 +309,20 @@
   }
 }
 
+html[data-density='compact'] {
+  .day-container {
+    grid-template-columns: repeat(auto-fit, minmax(190px, 220px));
+    gap: 1rem;
+  }
+  .card {
+    max-width: 220px;
+    height: 330px;
+  }
+  .card-title {
+    font-size: 16px;
+  }
+}
+
 // Touch screens have no hover: the links, calendar button and countdown are
 // always visible in the top left corner instead.
 @media (hover: none) {
@@ -355,4 +378,22 @@
     0 0 0 3px var(--card-accent),
     0 26px 60px rgba(0, 0, 0, 0.38);
   transition: box-shadow 300ms ease;
+}
+
+// Browser level virtualization: cards far from the viewport skip layout and
+// paint until they scroll close, which keeps long schedules smooth.
+.day-container > .card-container {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 410px;
+}
+
+.card .card-summary .badges {
+  margin-bottom: -0.25rem;
+}
+
+.share-button.is-compact {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 10px;
 }

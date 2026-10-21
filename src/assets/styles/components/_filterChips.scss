@@ -1,0 +1,59 @@
+@use '../settings/variables' as *;
+
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.45rem;
+  margin: 0.85rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 32px;
+  padding: 0 0.4rem 0 0.8rem;
+  border: 1px solid rgba($pink, 0.45);
+  border-radius: 999px;
+  background: rgba($pink, 0.12);
+  box-shadow: none;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+
+  &:hover {
+    background: rgba($pink, 0.22);
+  }
+
+  &:focus {
+    box-shadow: none;
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba($pink, 0.7);
+    outline-offset: 2px;
+  }
+}
+
+.filter-chip-remove {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  font-size: 15px;
+  line-height: 1;
+}
+
+.filter-chip-clear {
+  padding: 0 0.8rem;
+  border-color: transparent;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.65);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

@@ -4,6 +4,8 @@ import {
   favoritesStore,
   getFavoriteIds,
   getFavorites,
+  getNotifyIds,
+  setFavoriteNotify,
   toggleFavorite,
   useFavorites,
 } from './favorites';
@@ -30,5 +32,18 @@ describe('favorites', () => {
     window.localStorage.setItem('aotd:favorites', '{not json');
     favoritesStore.reset();
     expect(getFavorites()).toEqual({});
+  });
+
+  it('turns notifications off and on for a single anime', () => {
+    toggleFavorite({ id: 1, title: 'Frieren' });
+    toggleFavorite({ id: 2, title: 'Dandadan' });
+    expect(getNotifyIds().sort()).toEqual([1, 2]);
+
+    setFavoriteNotify(2, false);
+    expect(getNotifyIds()).toEqual([1]);
+    expect(getFavoriteIds().sort()).toEqual([1, 2]);
+
+    setFavoriteNotify(2, true);
+    expect(getNotifyIds().sort()).toEqual([1, 2]);
   });
 });

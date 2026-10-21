@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react';
 import { anilistRequest } from './anilist';
+import { readPersistent, writePersistent } from './persistentCache';
 
 const CACHE_TTL_MS = 10 * 60 * 1000;
+// Detail data changes rarely: a persisted copy is reused for 30 minutes and is
+// still shown, up to a week old, when AniList cannot be reached.
+const PERSIST_FRESH_MS = 30 * 60 * 1000;
+const PERSIST_FALLBACK_MS = 7 * 24 * 60 * 60 * 1000;
 
 interface CacheEntry {
   promise: Promise<unknown>;
@@ -9,7 +14,7 @@ interface CacheEntry {
   fetchedAt: number;
 }
 
-// Shared response cache, so going back to a page shows it instantly.
+// Shared in memory cache, so going back to a page shows it instantly.
 const cache = new Map<string, CacheEntry>();
 
 export const clearQueryCache = () => cache.clear();
@@ -17,27 +22,51 @@ export const clearQueryCache = () => cache.clear();
 const cacheKey = (query: string, variables: Record<string, unknown>) =>
   `${query}::${JSON.stringify(variables)}`;
 
-// Runs a query through the cache. Concurrent callers share a single request.
+// Short key for localStorage: operation name plus variables.
+const persistKey = (query: string, variables: Record<string, unknown>) =>
+  `${query.match(/query\s+(\w+)/)?.[1] ?? 'query'}:${JSON.stringify(variables)}`;
+
+// Runs a query through the caches. Concurrent callers share a single request.
 export function cachedRequest<T>(query: string, variables: Record<string, unknown>): Promise<T> {
   const key = cacheKey(query, variables);
   const cached = cache.get(key);
   if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) return cached.promise as Promise<T>;
 
+  const storageKey = persistKey(query, variables);
   const entry: CacheEntry = { promise: Promise.resolve(), fetchedAt: Date.now() };
-  entry.promise = anilistRequest<T>(query, variables).then((data) => {
-    entry.data = data;
-    return data;
-  });
-  entry.promise.catch(() => cache.delete(key));
+  const persisted = readPersistent<T>(storageKey, PERSIST_FRESH_MS);
+
+  if (persisted !== undefined) {
+    entry.data = persisted;
+    entry.promise = Promise.resolve(persisted);
+  } else {
+    entry.promise = anilistRequest<T>(query, variables).then(
+      (data) => {
+        entry.data = data;
+        writePersistent(storageKey, data);
+        return data;
+      },
+      (error: unknown) => {
+        const fallback = readPersistent<T>(storageKey, PERSIST_FALLBACK_MS);
+        if (fallback !== undefined) {
+          entry.data = fallback;
+          return fallback;
+        }
+        cache.delete(key);
+        throw error;
+      },
+    );
+  }
   cache.set(key, entry);
   return entry.promise as Promise<T>;
 }
 
 const readCached = <T>(query: string, variables: Record<string, unknown>) => {
   const cached = cache.get(cacheKey(query, variables));
-  return cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS
-    ? (cached.data as T | undefined)
-    : undefined;
+  if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS && cached.data !== undefined) {
+    return cached.data as T;
+  }
+  return readPersistent<T>(persistKey(query, variables), PERSIST_FRESH_MS);
 };
 
 interface QueryState<T> {
