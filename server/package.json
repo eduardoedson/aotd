@@ -10,6 +10,7 @@
   "scripts": {
     "start": "node src/index.js",
     "generate-vapid": "node src/generateVapid.js",
+    "setup-env": "node src/setupEnv.js",
     "test": "node --test"
   },
   "dependencies": {

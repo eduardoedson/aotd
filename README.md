@@ -89,11 +89,11 @@ design/           ficheiros PSD (ignorados pelo Git)
 
 ### Servidor de push
 
-Corre no pm2 do utilizador definido em `WEB_USER` (o mesmo que faz o deploy), na porta da app Node.js do CloudPanel.
+Corre no pm2 como `aotd`, na porta 7115 (a mesma do `proxy_pass` do vhost), com o Node 22 que o deploy carrega via nvm.
 
-1. Em `/home/eduardoalves-aotd/htdocs/aotd.eduardoalves.tech/server`: `npm install --omit=dev` e `npm run generate-vapid`.
-2. Crie `server/.env` a partir de `server/.env.example`, com as chaves geradas e `PORT` igual à porta da app.
-3. Rode `pm2 start ecosystem.config.cjs && pm2 save`. Para o pm2 arrancar com o servidor, rode `pm2 startup` uma vez e siga a instrução que ele mostra.
+O `COMMAND` do `scripts/.env` faz tudo a cada deploy: `npm install` em `server/`, `npm run setup-env` e recria o processo no pm2. O `setup-env` cria o `server/.env` a partir do `server/.env.example` no primeiro deploy, com um par de chaves VAPID novo, e depois nunca o altera (trocar as chaves invalidaria as inscrições dos navegadores).
+
+Para o pm2 arrancar com o servidor, rode `pm2 startup` uma vez no servidor e siga a instrução que ele mostra.
 
 Sem o servidor de push, as notificações continuam a funcionar enquanto o site estiver aberto numa aba.
 

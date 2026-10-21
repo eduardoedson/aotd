@@ -4,7 +4,7 @@ import { createStore } from './store.js';
 import { collectMediaIds, fetchNextEpisodes, findReleases, updateTracker } from './releases.js';
 
 const {
-  PORT = '3100',
+  PORT = '7115',
   HOST = '127.0.0.1',
   DATA_DIR = './data',
   VAPID_PUBLIC_KEY,

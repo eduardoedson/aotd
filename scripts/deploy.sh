@@ -9,6 +9,7 @@
 #   ./scripts/deploy.sh --full        # upload every file, ignoring the change check
 #   ./scripts/deploy.sh --web-only    # build the site but skip COMMAND (push server)
 #   ./scripts/deploy.sh --clean       # drop old hashed assets instead of keeping them
+#   ./scripts/deploy.sh --diagnose    # only print the push server state on the server (no deploy)
 #
 # Steps:
 #   1. Loads credentials from scripts/.env (same format as the Akaread scripts)
@@ -36,13 +37,15 @@ FULL_UPLOAD=false
 RUN_CHECKS=false
 WEB_ONLY=false
 CLEAN_ASSETS=false
+DIAGNOSE=false
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --full) FULL_UPLOAD=true ;;
     --check) RUN_CHECKS=true ;;
     --web-only) WEB_ONLY=true ;;
     --clean) CLEAN_ASSETS=true ;;
-    -h|--help) sed -n '2,25p' "$0"; exit 0 ;;
+    --diagnose) DIAGNOSE=true ;;
+    -h|--help) sed -n '2,26p' "$0"; exit 0 ;;
     *) die "Unknown option: $1 (see --help)" ;;
   esac
   shift
@@ -99,6 +102,7 @@ export DEPLOY_ROOT_DIR="$(to_py_path "$ROOT_DIR")"
 export DEPLOY_FULL_UPLOAD="$FULL_UPLOAD"
 export DEPLOY_WEB_ONLY="$WEB_ONLY"
 export DEPLOY_CLEAN_ASSETS="$CLEAN_ASSETS"
+export DEPLOY_DIAGNOSE="$DIAGNOSE"
 export DEPLOY_VERSION="$(git -C "$ROOT_DIR" rev-parse --short HEAD 2>/dev/null || date +%Y%m%d%H%M%S)"
 export PYTHONIOENCODING="utf-8"
 export PYTHONUNBUFFERED="1"
@@ -164,8 +168,9 @@ SITE_URL = (env.get("SITE_URL") or "https://aotd.eduardoalves.tech").rstrip("/")
 # Runs after the build, from the project root on the server
 DEFAULT_COMMAND = (
     "cd server && "
-    "if [ ! -f .env ]; then echo 'server/.env is missing: create it from .env.example first'; exit 2; fi && "
     "npm install --omit=dev --no-audit --no-fund && "
+    # creates server/.env with VAPID keys on the first deploy, never changes it later
+    "npm run setup-env && "
     # delete + start (not reload) so pm2 also picks up a new Node interpreter
     f"(pm2 delete {PM2_NAME} >/dev/null 2>&1 || true) && "
     "pm2 start ecosystem.config.cjs && "
@@ -180,6 +185,7 @@ FULL_UPLOAD = os.environ.get("DEPLOY_FULL_UPLOAD") == "true"
 WEB_ONLY = os.environ.get("DEPLOY_WEB_ONLY") == "true"
 CLEAN_ASSETS = os.environ.get("DEPLOY_CLEAN_ASSETS") == "true"
 VERSION = os.environ.get("DEPLOY_VERSION") or "unknown"
+DIAGNOSE = os.environ.get("DEPLOY_DIAGNOSE") == "true"
 
 # Never uploaded, at any depth: WEB_IGNORED_FOLDER plus the build output, which is made on the server
 DEFAULT_IGNORED = "node_modules,.history,.git,.vscode,design,coverage,playwright-report,test-results,_to_delete"
@@ -253,6 +259,33 @@ try:
     connect()
 except Exception as exc:
     die(f"Could not connect to {HOST}: {exc}")
+
+# ── --diagnose: read only report of the push server ─────────────────────────
+# Prints only key names from server/.env, never their values.
+if DIAGNOSE:
+    name = shlex.quote(PM2_NAME)
+    report = (
+        f"cd {shlex.quote(REMOTE_ROOT)} || exit 1; "
+        "echo '== Node'; echo \"system: $(command -v node) $(node -v 2>/dev/null)\"; "
+        "ls \"${NVM_DIR:-$HOME/.nvm}/versions/node\" 2>/dev/null | sed 's/^/nvm: /'; "
+        "echo '== server/.env (keys only)'; "
+        "if [ -f server/.env ]; then sed -E 's/=.*/=***/' server/.env | grep -v '^#' | grep .; else echo 'MISSING'; fi; "
+        "PORT=$(grep -E '^PORT=' server/.env 2>/dev/null | head -1 | cut -d= -f2 | tr -d '\"\\'\\'' '); "
+        "PORT=${PORT:-7115}; echo \"PORT used by the app: $PORT\"; "
+        f"echo '== pm2 {PM2_NAME}'; "
+        f"pm2 describe {name} 2>&1 | grep -E 'status|restarts|interpreter|node.js version|script path|exec cwd|error log' || echo 'not in pm2'; "
+        f"echo '== Last log lines'; pm2 logs {name} --lines 40 --nostream --raw 2>&1 | tail -50; "
+        "echo '== Listening on the port'; (ss -ltnp 2>/dev/null | grep -E \":$PORT\\b\") || echo \"nothing listens on $PORT\"; "
+        "echo '== API from the server itself'; "
+        "curl -s -m 5 -o /dev/null -w 'http://127.0.0.1:'$PORT'/api/push/public-key -> %{http_code}\\n' http://127.0.0.1:$PORT/api/push/public-key; "
+        "echo '== Vhost'; grep -hnE 'proxy_pass|^[[:space:]]*root ' /etc/nginx/sites-enabled/*aotd* 2>/dev/null || echo 'vhost file not readable'"
+    )
+    info(f"Diagnosing the push server on {HOST}")
+    _, stdout, _ = ssh.exec_command(f"bash -lc {shlex.quote(report)}", get_pty=True)
+    for line in iter(stdout.readline, ""):
+        print(f"  {line}", end="", flush=True)
+    ssh.close()
+    sys.exit(0)
 
 # ── Step 1: upload ─────────────────────────────────────────────────────────
 info("Step 1/4: uploading the project" + (" (every file, --full)" if FULL_UPLOAD else " (only changed files)"))
