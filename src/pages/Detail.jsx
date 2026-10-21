@@ -1,13 +1,13 @@
 import { useMemo } from 'react';
-import { useQuery } from '@apollo/client';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import DOMPurify from 'dompurify';
-import Loading from '../components/Loading';
 import Tag from '../components/Tag';
 import MiniCard from '../components/MiniCard';
 import StarRating from '../components/StarRating';
 import FavoriteButton from '../components/FavoriteButton';
 import AddToCalendarButton from '../components/AddToCalendarButton';
+import ShareButton from '../components/ShareButton';
+import DetailSkeleton from '../components/DetailSkeleton';
 import Timer from '../components/Timer';
 import UpcomingOnly from '../components/UpcomingOnly';
 import Error from './Error';
@@ -18,9 +18,10 @@ import {
   humanizeEnum,
   isValidDate,
 } from '../services/globals';
-import { getHttpStatus } from '../services/backend';
+import { getErrorStatus } from '../services/anilist';
+import { useAnilistQuery } from '../services/useAnilistQuery';
+import { DETAIL_QUERY } from '../services/queries';
 import { useDocumentTitle } from '../services/useDocumentTitle';
-import { DETAIL_QUERY } from '../services/detail';
 
 function Category({ title, inline = false, children }) {
   return (
@@ -67,13 +68,16 @@ function DetailView({ info, date, search }) {
           <div className='detail-block detail-block-cover'>
             {coverImage ? <img className='detail-cover' src={coverImage} alt={title} /> : null}
             {info.averageScore ? <StarRating score={info.averageScore} /> : null}
-            <FavoriteButton
-              className='detail-favorite'
-              id={info.id}
-              title={title}
-              image={coverImage}
-              showLabel
-            />
+            <div className='detail-actions'>
+              <FavoriteButton
+                className='detail-favorite'
+                id={info.id}
+                title={title}
+                image={coverImage}
+                showLabel
+              />
+              <ShareButton title={title} />
+            </div>
           </div>
 
           <div className='detail-block detail-block-meta'>
@@ -206,8 +210,8 @@ function Detail() {
   const numericId = Number(id);
   const validId = Number.isInteger(numericId) && numericId > 0;
   const validDate = isValidDate(date);
-  const { loading, error, data } = useQuery(DETAIL_QUERY, {
-    variables: { id: numericId },
+  const variables = useMemo(() => ({ id: numericId }), [numericId]);
+  const { loading, error, data } = useAnilistQuery(DETAIL_QUERY, variables, {
     skip: !validId || !validDate,
   });
   const info = data?.Media;
@@ -216,9 +220,9 @@ function Detail() {
 
   if (!validDate) return <Error msg='Invalid date. Use the YYYY-MM-DD format.' />;
   if (!validId) return <Error msg='Invalid item ID!' />;
-  if (loading) return <Loading />;
+  if (loading) return <DetailSkeleton />;
   if (error) {
-    return <Error msg={getHttpStatus(error) === 404 ? 'Item Not Found!' : error.message} />;
+    return <Error msg={getErrorStatus(error) === 404 ? 'Item Not Found!' : error.message} />;
   }
   if (!info) return <Error msg='Item Not Found!' />;
 

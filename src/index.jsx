@@ -1,14 +1,23 @@
-import React, { lazy, Suspense } from 'react';
-import ReactDOM from 'react-dom/client';
+import { lazy, StrictMode, Suspense } from 'react';
+import { createRoot } from 'react-dom/client';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import App from './App';
 import Loading from './components/Loading';
 import RedirectToToday from './pages/RedirectToToday';
+import RouteError from './pages/RouteError';
+import ErrorPage from './pages/Error';
 import { registerServiceWorker } from './services/serviceWorker';
+import { initMonitoring } from './services/monitoring';
+import { initConsent } from './services/consent';
 
+// Self-hosted font: no request to Google Fonts, so no visitor IP is shared with Google.
+import '@fontsource/roboto/latin-400.css';
+import '@fontsource/roboto/latin-700.css';
 import './assets/styles/main.scss';
 
-const ErrorPage = lazy(() => import('./pages/Error'));
+initMonitoring();
+initConsent();
+
 const Home = lazy(() => import('./pages/Home'));
 const Detail = lazy(() => import('./pages/Detail'));
 
@@ -18,20 +27,20 @@ const router = createBrowserRouter([
   {
     path: '/',
     element: <App />,
-    errorElement: renderPage(<ErrorPage msg='Unexpected application error.' />),
+    errorElement: <RouteError />,
     children: [
       { index: true, element: <RedirectToToday /> },
       { path: ':date', element: renderPage(<Home />) },
       { path: ':date/:id', element: renderPage(<Detail />) },
-      { path: '*', element: renderPage(<ErrorPage msg='404 Page Not Found' />) },
+      { path: '*', element: <ErrorPage msg='404 Page Not Found' /> },
     ],
   },
 ]);
 
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
+createRoot(document.getElementById('root')).render(
+  <StrictMode>
     <RouterProvider router={router} />
-  </React.StrictMode>,
+  </StrictMode>,
 );
 
 registerServiceWorker();

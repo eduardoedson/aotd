@@ -7,3 +7,9 @@ coverage
 .history
 design/*.psd
 _to_delete
+playwright-report
+test-results
+server/node_modules
+server/data
+server/.env
+scripts/.env

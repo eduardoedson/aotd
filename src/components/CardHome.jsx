@@ -4,11 +4,17 @@ import Timer from './Timer';
 import FavoriteButton from './FavoriteButton';
 import AddToCalendarButton from './AddToCalendarButton';
 import UpcomingOnly from './UpcomingOnly';
-import { DEFAULT_ACCENT, getSafeExternalUrl, toPlainText, truncateText } from '../services/globals';
+import {
+  DEFAULT_ACCENT,
+  formatAiringTime,
+  getSafeExternalUrl,
+  toPlainText,
+  truncateText,
+} from '../services/globals';
 
 const DESCRIPTION_LIMIT = 600;
 
-function CardHome({ item, date, search = '' }) {
+function CardHome({ item, date, search = '', timeZone = 'utc' }) {
   const { media, episode, airingAt } = item;
   const title = media.title?.userPreferred ?? 'Untitled';
   const color = media.coverImage?.color || DEFAULT_ACCENT;
@@ -30,7 +36,7 @@ function CardHome({ item, date, search = '' }) {
     .filter((link) => link.url && link.icon);
 
   return (
-    <article className='card-container'>
+    <article className='card-container' id={`airing-${item.id}`}>
       <div className='card' style={{ '--card-accent': color }}>
         {imgSrc ? (
           <img className='card-image' src={imgSrc} alt='' loading='lazy' decoding='async' />
@@ -44,9 +50,14 @@ function CardHome({ item, date, search = '' }) {
         >
           <div className='card-summary'>
             <h2 className='card-title'>{title}</h2>
-            <div className='card-episode'>
-              <span>Episode</span>
-              <strong>{episode}</strong>
+            <div className='card-meta'>
+              <div className='card-episode'>
+                <span>Episode</span>
+                <strong>{episode}</strong>
+              </div>
+              <time className='card-time' dateTime={new Date(airingAt * 1000).toISOString()}>
+                {formatAiringTime(airingAt, timeZone)}
+              </time>
             </div>
           </div>
           <div className='card-hover-content'>

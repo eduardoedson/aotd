@@ -1,6 +1,6 @@
-// AOTD service worker: caches the app shell so it opens offline and handles
-// notification clicks. Bump CACHE_VERSION to force old caches to be dropped.
-const CACHE_VERSION = 'aotd-v1';
+// AOTD service worker: caches the app shell so it opens offline, shows Web Push
+// notifications and handles their clicks. Bump CACHE_VERSION to drop old caches.
+const CACHE_VERSION = 'aotd-v2';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -72,7 +72,7 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET') return;
 
   const url = new URL(request.url);
-  if (url.origin !== self.location.origin) return;
+  if (url.origin !== self.location.origin || url.pathname.startsWith('/api/')) return;
 
   if (request.mode === 'navigate') {
     event.respondWith(handleNavigation(request));
@@ -81,6 +81,26 @@ self.addEventListener('fetch', (event) => {
   } else {
     event.respondWith(handleStatic(request));
   }
+});
+
+// Notifications sent by the AOTD push server (server/).
+self.addEventListener('push', (event) => {
+  let payload;
+  try {
+    payload = event.data ? event.data.json() : {};
+  } catch {
+    payload = { body: event.data ? event.data.text() : '' };
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(payload.title || 'AOTD', {
+      body: payload.body || 'A new episode is out!',
+      icon: payload.icon || '/icons/icon-192.png',
+      badge: '/icons/icon-192.png',
+      tag: payload.tag,
+      data: { url: payload.url || '/' },
+    }),
+  );
 });
 
 self.addEventListener('notificationclick', (event) => {

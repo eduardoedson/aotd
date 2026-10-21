@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { openConsentDialog } from '../services/consent';
 
 function Footer() {
   const [year] = useState(() => new Date().getUTCFullYear());
@@ -15,6 +16,9 @@ function Footer() {
             AniList
           </a>
         </span>
+        <button type='button' className='footer-link-button' onClick={openConsentDialog}>
+          Cookie settings
+        </button>
       </div>
     </footer>
   );

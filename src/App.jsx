@@ -1,6 +1,4 @@
-import { ApolloProvider } from '@apollo/client';
 import Root from './pages/Root';
-import { anilist } from './services/backend';
 import { useReleaseNotifications } from './services/notifications';
 
 function ReleaseNotifications() {
@@ -10,10 +8,10 @@ function ReleaseNotifications() {
 
 function App() {
   return (
-    <ApolloProvider client={anilist}>
+    <>
       <ReleaseNotifications />
       <Root />
-    </ApolloProvider>
+    </>
   );
 }
 

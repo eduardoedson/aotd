@@ -45,3 +45,24 @@
     text-align: center;
   }
 }
+
+.footer-link-button {
+  height: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 11px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+
+  &:hover,
+  &:focus-visible {
+    color: #ff3d8d;
+  }
+
+  &:focus {
+    box-shadow: none;
+  }
+}

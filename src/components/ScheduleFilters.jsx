@@ -7,7 +7,7 @@ import {
 } from '../services/notifications';
 
 function NotificationToggle() {
-  const { supported, permission, enabled } = useNotificationStatus();
+  const { supported, permission, enabled, mode } = useNotificationStatus();
 
   if (!supported) return null;
 
@@ -22,13 +22,20 @@ function NotificationToggle() {
     );
   }
 
+  const title =
+    mode === 'push'
+      ? 'Notifications are on, even when AOTD is closed'
+      : mode === 'tab'
+        ? 'Notifications are on while AOTD is open in a tab'
+        : 'Get a notification when an episode of a favorite is released';
+
   return (
     <button
       type='button'
       className={`filters-chip${enabled ? ' is-active' : ''}`}
       aria-pressed={enabled}
       onClick={() => (enabled ? disableNotifications() : enableNotifications())}
-      title='Get a notification when an episode of a favorite is released (while AOTD is open)'
+      title={title}
     >
       <svg viewBox='0 0 24 24' aria-hidden='true' focusable='false'>
         <path d='M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22zm7-6V11a7 7 0 0 0-5.5-6.84V3a1.5 1.5 0 0 0-3 0v1.16A7 7 0 0 0 5 11v5l-2 2v1h18v-1l-2-2z' />

@@ -1,0 +1,18 @@
+{
+  "name": "aotd-push-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Sends Web Push notifications when episodes of AOTD favorites are released.",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "generate-vapid": "node src/generateVapid.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "web-push": "^3.6.7"
+  }
+}

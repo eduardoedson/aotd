@@ -8,6 +8,49 @@
   width: 100%;
 }
 
+.calendar-view-toggle,
+.timezone-toggle {
+  display: inline-flex;
+  padding: 0.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+
+  button {
+    height: 34px;
+    padding: 0 1.1rem;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    box-shadow: none;
+    color: rgba(255, 255, 255, 0.62);
+    font-size: 13px;
+    font-weight: 700;
+
+    &:hover {
+      color: #fff;
+    }
+
+    &:focus {
+      box-shadow: none;
+    }
+
+    &:focus-visible {
+      outline: 2px solid rgba($pink, 0.7);
+      outline-offset: 2px;
+    }
+
+    &.is-active {
+      background: rgba($pink, 0.2);
+      color: #fff;
+    }
+  }
+}
+
+.calendar-view-toggle {
+  margin-bottom: 0.85rem;
+}
+
 .calendar-controllers {
   display: grid;
   grid-template-columns: 46px minmax(250px, auto) 46px;
@@ -21,79 +64,24 @@
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.2);
 }
 
-.react-datepicker-wrapper,
-.react-datepicker__input-container {
-  width: 100%;
-  margin: 0;
+.calendar-date-field {
+  position: relative;
+  min-width: 0;
 }
 
-.calendar-controllers > .react-datepicker__tab-loop {
+// The native date input stays rendered (showPicker needs it) but invisible.
+.calendar-date-input {
   position: absolute;
-  width: 0;
-  height: 0;
-}
-
-.calendar-picker-header {
-  display: grid;
-  grid-template-columns: 42px 1fr 42px;
-  align-items: center;
-  gap: 0.75rem;
-  width: 100%;
-}
-
-.calendar-picker-heading {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.2rem;
-
-  span {
-    color: rgba(255, 255, 255, 0.38);
-    font-size: 0.6rem;
-    font-weight: 700;
-    letter-spacing: 0.13em;
-    text-transform: uppercase;
-  }
-
-  strong {
-    color: white;
-    font-size: 1rem;
-    line-height: 1.2;
-    letter-spacing: -0.02em;
-  }
-}
-
-.calendar-picker-navigation {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 42px;
-  height: 42px;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  height: 1px;
+  max-width: none;
   padding: 0;
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.045);
-  transition:
-    transform 150ms ease,
-    background 150ms ease,
-    border-color 150ms ease;
-
-  img {
-    width: 19px;
-    height: 19px;
-    opacity: 0.78;
-  }
-
-  &:hover:not(:disabled) {
-    transform: translateY(-1px);
-    background: rgba($pink, 0.14);
-    border-color: rgba($pink, 0.34);
-  }
-
-  &:disabled {
-    cursor: not-allowed;
-    opacity: 0.3;
-  }
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+  color-scheme: dark;
 }
 
 .calendar-controller-selected {
@@ -143,6 +131,28 @@
   height: 22px;
 }
 
+.calendar-today {
+  height: auto;
+  margin-top: 0.7rem;
+  padding: 0.3rem 0.6rem;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: #ff83b7;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+
+  &:focus {
+    box-shadow: none;
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba($pink, 0.7);
+  }
+}
+
 @media screen and (max-width: 767px) {
   .calendar-controllers {
     grid-template-columns: 46px minmax(0, 1fr) 46px;
@@ -151,15 +161,9 @@
     padding: 0.4rem;
   }
 
-  .react-datepicker-wrapper,
-  .react-datepicker__input-container {
-    min-width: 0;
-  }
-
   .calendar-controller-selected {
-    min-width: 0;
-    width: 100%;
     font-size: 14px;
+    padding: 0 0.75rem;
   }
 
   .calendar-controller-leftArrow,

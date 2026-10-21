@@ -17,4 +17,6 @@ vi.stubGlobal('IntersectionObserver', MockIntersectionObserver);
 afterEach(() => {
   cleanup();
   window.localStorage.clear();
+  vi.unstubAllGlobals();
+  vi.stubGlobal('IntersectionObserver', MockIntersectionObserver);
 });

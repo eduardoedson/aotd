@@ -1,7 +1,8 @@
 @use '../settings/variables' as *;
 
 .favorite-button,
-.calendar-add-button {
+.calendar-add-button,
+.share-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -63,7 +64,8 @@
 }
 
 .favorite-button:has(span),
-.calendar-add-button:has(span) {
+.calendar-add-button:has(span),
+.share-button {
   width: auto;
   padding: 0 1rem;
 }
@@ -71,6 +73,7 @@
 // Override the global button focus shadow, these controls use an outline instead.
 .favorite-button,
 .calendar-add-button,
+.share-button,
 .filters-chip,
 .filters-clear,
 .day-load-more,

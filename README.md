@@ -6,14 +6,20 @@ Calendário web de lançamentos de anime. O aplicativo consulta a API GraphQL do
 
 ## Funcionalidades
 
-- Agenda diária com scroll infinito (páginas de 50 episódios carregadas ao descer)
-- Contagem regressiva calculada a partir do `airingAt`, sempre correta mesmo com cache
-- Pesquisa por título, filtro por género e filtro "só os meus favoritos", guardados na URL
-- Favoritos guardados no navegador (localStorage), sincronizados entre abas
-- Botão "Adicionar ao calendário" que gera um ficheiro `.ics` com lembrete de 10 minutos
-- PWA instalável, com funcionamento offline do shell da aplicação
-- Notificações quando sai um episódio de um favorito (com a app aberta em alguma aba)
-- Pré-carregamento do dia anterior e do seguinte
+- Agenda diária com scroll infinito e vista semanal (sete colunas)
+- Hora local ou UTC, escolhida na barra do topo
+- Contagem regressiva calculada a partir do `airingAt`
+- Botão "Next up" que leva ao próximo episódio do dia
+- Pesquisa por título, filtro por género e "só os meus favoritos", guardados na URL
+- Favoritos no navegador, sincronizados entre abas
+- Ficheiro `.ics` para adicionar episódios ao calendário
+- Partilha nativa (ou cópia do link) na página de detalhe
+- Atalhos: ← e → mudam de dia (ou semana), T volta a hoje
+- PWA instalável, com o shell disponível offline
+- Notificações de lançamento por Web Push, mesmo com o site fechado
+- Banner de cookies: o Google Analytics só carrega depois de aceite
+- Fonte Roboto servida pelo próprio site, sem pedidos ao Google Fonts
+- Monitorização de erros com Sentry (opcional)
 
 ## Requisitos
 
@@ -27,15 +33,23 @@ npm install
 npm run dev
 ```
 
-Por padrão, o servidor abre em `http://localhost:7115`. Para alterar a porta, copie `.env.example` para `.env` e ajuste `PORT`.
+Por padrão, o servidor abre em `http://localhost:7115`. Copie `.env.example` para `.env` para mudar a porta ou configurar o Sentry.
+
+| Variável           | Uso                                                       |
+| ------------------ | --------------------------------------------------------- |
+| `PORT`             | Porta do servidor de desenvolvimento                      |
+| `VITE_SENTRY_DSN`  | DSN do Sentry; vazio desliga a monitorização              |
+| `PUSH_SERVER_PORT` | Porta do servidor de push local, usada pelo proxy do Vite |
 
 ## Comandos
 
-- `npm run dev`: inicia o servidor de desenvolvimento.
-- `npm run build`: gera o bundle de produção em `dist/`.
-- `npm run preview`: serve localmente o bundle de produção.
-- `npm test`: executa todos os testes uma vez.
-- `npm run test:watch`: executa os testes em modo interativo.
+- `npm run dev`: servidor de desenvolvimento.
+- `npm run build`: bundle de produção em `dist/`.
+- `npm run preview`: serve o bundle de produção.
+- `npm test` / `npm run test:watch`: testes unitários (Vitest).
+- `npm run test:e2e`: testes end to end (Playwright). Na primeira vez rode `npx playwright install chromium`.
+- `npm run test:server`: testes do servidor de push.
+- `npm run typecheck`: verificação de tipos (TypeScript).
 - `npm run lint` / `npm run lint:fix`: ESLint.
 - `npm run format` / `npm run format:check`: Prettier.
 
@@ -46,46 +60,67 @@ src/
 ├── assets/       estilos e imagens
 ├── components/   componentes reutilizáveis
 ├── pages/        páginas e layouts de rota
-└── services/     cliente GraphQL, queries, hooks e funções partilhadas
+├── services/     cliente AniList, queries, hooks e lógica (TypeScript)
+└── test/         utilitários de teste
+e2e/              testes Playwright
+server/           servidor de Web Push (Node)
 public/           manifest, service worker, ícones e .htaccess
-deploy/           configuração Nginx de referência
+deploy/           vhost Nginx do CloudPanel
+scripts/          deploy e manutenção
 design/           ficheiros PSD (ignorados pelo Git)
 ```
 
 ## Deploy
 
-O workflow `.github/workflows/ci.yml` corre lint, formatação, testes e build em cada push. Num push para `main`, publica o `dist/` no servidor por `rsync` com chave SSH.
+O workflow `.github/workflows/ci.yml` corre lint, tipos, formatação, testes unitários, testes do servidor de push, testes E2E e build em cada push. Num push para `main`, publica o `dist/` e o servidor de push por `rsync` com chave SSH.
 
-Secrets necessários no repositório (Settings > Secrets and variables > Actions, ambiente `production`):
+Secrets do repositório (Settings > Secrets and variables > Actions, ambiente `production`):
 
-| Secret               | Valor                            |
-| -------------------- | -------------------------------- |
-| `DEPLOY_HOST`        | IP ou domínio do servidor        |
-| `DEPLOY_USER`        | utilizador do site (não root)    |
-| `DEPLOY_PATH`        | `/home/aotd/htdocs/aotd.net`     |
-| `DEPLOY_SSH_KEY`     | chave privada dedicada ao deploy |
-| `DEPLOY_KNOWN_HOSTS` | saída de `ssh-keyscan <host>`    |
+| Secret               | Valor                                                          |
+| -------------------- | -------------------------------------------------------------- |
+| `DEPLOY_HOST`        | IP ou domínio do servidor                                      |
+| `DEPLOY_USER`        | `eduardoalves-aotd`                                            |
+| `DEPLOY_PATH`        | `/home/eduardoalves-aotd/htdocs/aotd.eduardoalves.tech/dist`   |
+| `DEPLOY_SSH_KEY`     | chave privada dedicada ao deploy                               |
+| `DEPLOY_KNOWN_HOSTS` | saída de `ssh-keyscan <host>`                                  |
+| `PUSH_PATH`          | `/home/eduardoalves-aotd/htdocs/aotd.eduardoalves.tech/server` |
+| `VITE_SENTRY_DSN`    | opcional, DSN do projeto no Sentry                             |
 
-### Servidor
+### Deploy manual
 
-O site é uma SPA. O servidor precisa de devolver `index.html` para qualquer rota desconhecida, senão abrir `/2026-10-21/12345` diretamente dá 404.
+`scripts/deploy.sh` envia o projeto por SFTP (só os ficheiros alterados) e faz o build no servidor, sem precisar do GitHub Actions. O build é gerado numa pasta temporária e só substitui o `dist/` se correr bem, por isso um build falhado não afeta o site. Copie `scripts/.env.example` para `scripts/.env` e preencha.
 
-- Nginx (CloudPanel): copie os blocos de `deploy/nginx-aotd.conf` para o vhost do site.
-- Apache ou LiteSpeed: o `public/.htaccess` já vai no build.
+```bash
+./scripts/deploy.sh               # envia, faz o build no servidor e reinicia o push
+./scripts/deploy.sh --check       # corre lint, tipos e testes localmente antes
+./scripts/deploy.sh --web-only    # não reinicia o servidor de push
+./scripts/deploy.sh --clean       # descarta os assets antigos de dist/assets
+./scripts/deploy.sh --full        # envia todos os ficheiros
+```
 
-O `sw.js` e o `manifest.webmanifest` não devem ter cache longo, para que as atualizações cheguem aos utilizadores.
+### Servidor web
+
+- Nginx (CloudPanel): cole `deploy/nginx-aotd.conf` no Vhost do site. O Nginx serve o build diretamente da pasta raiz do site, com fallback de SPA, cabeçalhos de segurança e cache certa para cada tipo de ficheiro. A porta da app Node.js do site fica para o servidor de push, em `/api/push/`.
+- Apache ou LiteSpeed: o `public/.htaccess` já vai no build, com os mesmos cabeçalhos.
+
+### Servidor de push
+
+Corre no pm2 com o utilizador do site, na porta da app Node.js do CloudPanel.
+
+1. Como `eduardoalves-aotd`, em `/home/eduardoalves-aotd/htdocs/aotd.eduardoalves.tech/server`: `npm install --omit=dev` e `npm run generate-vapid`.
+2. Crie `server/.env` a partir de `server/.env.example`, com as chaves geradas e `PORT` igual à porta da app.
+3. Rode `pm2 start ecosystem.config.cjs && pm2 save`. Para o pm2 arrancar com o servidor, rode `pm2 startup` uma vez e siga a instrução que ele mostra.
+
+Sem o servidor de push, as notificações continuam a funcionar enquanto o site estiver aberto numa aba.
+
+### Limpar o histórico do Git
+
+Os PSDs antigos ainda ocupam espaço no histórico. `scripts/purge-psd-history.sh` remove-os com `git filter-repo`, depois de criar um backup. Isto reescreve o histórico e exige `git push --force-with-lease`, por isso só deve ser corrido de propósito.
 
 ## Dados e segurança
 
-Os dados são fornecidos pela [AniList GraphQL API](https://anilist.co/graphiql). HTML vindo da API é sanitizado com DOMPurify e URLs externas são limitadas a HTTP/HTTPS. Conteúdo adulto é filtrado da agenda.
-
-Os pedidos repetem automaticamente só em falhas de rede, erros 5xx e limite de taxa (429, respeitando o `Retry-After`). Erros como 400 e 404 não são repetidos.
-
-## Limitações conhecidas
-
-- As notificações funcionam enquanto a AOTD está aberta em alguma aba (ou instalada como app e em execução). Notificações com o navegador totalmente fechado exigiriam um servidor de Web Push.
-- O dia da agenda é calculado em UTC.
+Os dados são fornecidos pela [AniList GraphQL API](https://anilist.co/graphiql). HTML vindo da API é sanitizado com DOMPurify, URLs externas são limitadas a HTTP/HTTPS e conteúdo adulto é filtrado. Os pedidos repetem só em falhas de rede, erros 5xx e 429 (respeitando o `Retry-After`).
 
 ## Stack
 
-React 18, React Router 7, Apollo Client, Sass, Vite, Vitest, ESLint e Prettier.
+React 19, React Router 7, TypeScript, Sass, Vite, Vitest, Playwright, ESLint e Prettier.

@@ -1,62 +1,52 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { MockedProvider } from '@apollo/client/testing';
 import { MemoryRouter } from 'react-router-dom';
 import Day from './Day';
-import { PER_PAGE, SCHEDULE_QUERY, clearScheduleCache } from '../services/schedule';
+import { clearScheduleCache } from '../services/schedule';
 import { favoritesStore } from '../services/favorites';
 import { getDayRange } from '../services/globals';
+import { graphQLError, mockAnilist } from '../test/anilistMock';
 
 const DATE = '2026-10-21';
+const RANGE = getDayRange(DATE, 'utc');
 
 const makeItem = (id, title, genres = ['Action'], isAdult = false) => ({
-  __typename: 'AiringSchedule',
   id: id * 10,
   episode: id,
   airingAt: Date.UTC(2026, 9, 21, 12) / 1000,
   media: {
-    __typename: 'Media',
     id,
     isAdult,
     siteUrl: `https://anilist.co/anime/${id}`,
     duration: 24,
     genres,
     description: `<b>${title}</b> description`,
-    title: { __typename: 'MediaTitle', userPreferred: title, romaji: title, english: null },
-    coverImage: {
-      __typename: 'MediaCoverImage',
-      extraLarge: `https://s4.anilist.co/${id}.jpg`,
-      color: '#123456',
-    },
+    title: { userPreferred: title, romaji: title, english: null },
+    coverImage: { extraLarge: `https://s4.anilist.co/${id}.jpg`, color: '#123456' },
     externalLinks: [],
   },
 });
 
-const pageMock = (date, page, items, hasNextPage) => {
-  const { start, end } = getDayRange(date);
-  return {
-    request: { query: SCHEDULE_QUERY, variables: { start, end, page, perPage: PER_PAGE } },
-    result: {
-      data: {
-        Page: {
-          __typename: 'Page',
-          pageInfo: { __typename: 'PageInfo', currentPage: page, hasNextPage },
-          airingSchedules: items,
-        },
-      },
-    },
-  };
-};
+const page = (items, pageNumber, hasNextPage) => ({
+  data: {
+    Page: { pageInfo: { currentPage: pageNumber, hasNextPage }, airingSchedules: items },
+  },
+});
 
-const neighbourMocks = [pageMock('2026-10-20', 1, [], false), pageMock('2026-10-22', 1, [], false)];
+// Serves the given pages for the tested day and empty pages for its neighbours.
+const serveDay = (pages) =>
+  mockAnilist(({ name, variables }) => {
+    if (name !== 'Schedule') return undefined;
+    if (variables.start !== RANGE.start) return page([], 1, false);
+    const handler = pages[variables.page - 1];
+    return typeof handler === 'function' ? handler() : handler;
+  });
 
-const renderDay = (mocks, filters) =>
+const renderDay = (filters) =>
   render(
-    <MockedProvider mocks={mocks}>
-      <MemoryRouter>
-        <Day date={DATE} filters={filters} />
-      </MemoryRouter>
-    </MockedProvider>,
+    <MemoryRouter>
+      <Day date={DATE} timeZone='utc' filters={filters} />
+    </MemoryRouter>,
   );
 
 afterEach(() => {
@@ -66,11 +56,11 @@ afterEach(() => {
 
 describe('Day', () => {
   it('loads the next page when more episodes are requested', async () => {
-    renderDay([
-      pageMock(DATE, 1, [makeItem(1, 'First Show'), makeItem(9, 'Adult Show', [], true)], true),
-      pageMock(DATE, 2, [makeItem(2, 'Second Show')], false),
-      ...neighbourMocks,
+    serveDay([
+      page([makeItem(1, 'First Show'), makeItem(9, 'Adult Show', [], true)], 1, true),
+      page([makeItem(2, 'Second Show')], 2, false),
     ]);
+    renderDay();
 
     expect(
       await screen.findByRole('heading', { name: 'First Show', level: 2 }),
@@ -87,23 +77,27 @@ describe('Day', () => {
     expect(screen.queryByRole('button', { name: 'Load more episodes' })).not.toBeInTheDocument();
   });
 
+  it('shows skeleton cards while the first page loads', async () => {
+    serveDay([page([makeItem(1, 'First Show')], 1, false)]);
+    renderDay();
+    expect(screen.getByLabelText('Loading schedule')).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'First Show', level: 2 }),
+    ).toBeInTheDocument();
+  });
+
   it('applies search, genre and favorite filters', async () => {
     const items = [makeItem(1, 'Frieren', ['Fantasy']), makeItem(2, 'Dandadan', ['Action'])];
-    const mocks = [pageMock(DATE, 1, items, false), ...neighbourMocks];
+    serveDay([page(items, 1, false)]);
 
-    const { unmount } = renderDay(mocks, {
-      query: 'frie',
-      genre: '',
-      favoritesOnly: false,
-      active: true,
-    });
+    const { unmount } = renderDay({ query: 'frie', genre: '', favoritesOnly: false, active: true });
     expect(await screen.findByRole('heading', { name: 'Frieren', level: 2 })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Dandadan', level: 2 })).not.toBeInTheDocument();
     expect(screen.getByText('1 of 2 episodes match your filters')).toBeInTheDocument();
     unmount();
 
     favoritesStore.set({ 2: { id: 2, title: 'Dandadan' } });
-    renderDay(mocks, { query: '', genre: 'Action', favoritesOnly: true, active: true });
+    renderDay({ query: '', genre: 'Action', favoritesOnly: true, active: true });
     const heading = await screen.findByRole('heading', { name: 'Dandadan', level: 2 });
     const card = heading.closest('article');
     expect(within(card).getByRole('button', { name: 'Favorite Dandadan' })).toHaveAttribute(
@@ -114,22 +108,24 @@ describe('Day', () => {
   });
 
   it('shows an empty state when nothing airs', async () => {
-    renderDay([pageMock(DATE, 1, [], false), ...neighbourMocks]);
+    serveDay([page([], 1, false)]);
+    renderDay();
     expect(await screen.findByText('No episodes are scheduled for this day.')).toBeInTheDocument();
   });
 
   it('lets the user retry after an error', async () => {
-    const { start, end } = getDayRange(DATE);
-    renderDay([
-      {
-        request: { query: SCHEDULE_QUERY, variables: { start, end, page: 1, perPage: PER_PAGE } },
-        error: new Error('Network down'),
+    let calls = 0;
+    serveDay([
+      () => {
+        calls += 1;
+        return calls === 1
+          ? graphQLError(400, 'Invalid query')
+          : page([makeItem(3, 'Recovered Show')], 1, false);
       },
-      pageMock(DATE, 1, [makeItem(3, 'Recovered Show')], false),
-      ...neighbourMocks,
     ]);
+    renderDay();
 
-    expect(await screen.findByText(/Network down/)).toBeInTheDocument();
+    expect(await screen.findByText('Invalid query')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
     expect(
       await screen.findByRole('heading', { name: 'Recovered Show', level: 2 }),

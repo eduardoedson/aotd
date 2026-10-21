@@ -1,20 +1,25 @@
 import { useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import CardHome from './CardHome';
+import SkeletonCard from './SkeletonCard';
 import Loading from './Loading';
 import Error from './Error';
+import NextEpisodeJump from './NextEpisodeJump';
 import { useDaySchedule } from '../services/schedule';
 import { useFavorites } from '../services/favorites';
 import { matchesFilters } from '../services/filters';
 import { useInfiniteScroll } from '../services/useInfiniteScroll';
-import { formatLongDate } from '../services/globals';
+import { formatLongDate, getToday } from '../services/globals';
 
 const NO_FILTERS = { query: '', genre: '', favoritesOnly: false, active: false };
+const SKELETON_COUNT = 8;
 
-function Day({ date, filters = NO_FILTERS }) {
+function Day({ date, timeZone = 'utc', filters = NO_FILTERS }) {
   const { search } = useLocation();
-  const { items, error, hasNextPage, loading, initialLoading, loadMore, retry } =
-    useDaySchedule(date);
+  const { items, error, hasNextPage, loading, initialLoading, loadMore, retry } = useDaySchedule(
+    date,
+    timeZone,
+  );
   const { isFavorite } = useFavorites();
 
   const { query, genre, favoritesOnly } = filters;
@@ -29,7 +34,18 @@ function Day({ date, filters = NO_FILTERS }) {
     version: items.length,
   });
 
-  if (initialLoading) return <Loading label='Loading schedule' />;
+  if (initialLoading) {
+    return (
+      <section className='day' aria-busy='true' aria-label='Loading schedule'>
+        <p className='day-summary'>Loading episodes…</p>
+        <div className='day-container'>
+          {Array.from({ length: SKELETON_COUNT }, (_, index) => (
+            <SkeletonCard key={index} />
+          ))}
+        </div>
+      </section>
+    );
+  }
 
   if (error && items.length === 0) {
     return (
@@ -49,14 +65,17 @@ function Day({ date, filters = NO_FILTERS }) {
 
   return (
     <section className='day' aria-label={`Episodes airing on ${formatLongDate(date)}`}>
-      <p className='day-summary' aria-live='polite'>
-        {summary}
-      </p>
+      <div className='day-toolbar'>
+        <p className='day-summary' aria-live='polite'>
+          {summary}
+        </p>
+        {date === getToday(timeZone) ? <NextEpisodeJump items={visibleItems} /> : null}
+      </div>
 
       {visibleItems.length > 0 ? (
         <div className='day-container'>
           {visibleItems.map((item) => (
-            <CardHome key={item.id} item={item} date={date} search={search} />
+            <CardHome key={item.id} item={item} date={date} search={search} timeZone={timeZone} />
           ))}
         </div>
       ) : null}

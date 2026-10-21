@@ -68,3 +68,65 @@
     padding-top: 1.25rem;
   }
 }
+
+.day-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem 1.25rem;
+  margin-top: 1.5rem;
+
+  .day-summary {
+    margin: 0;
+  }
+}
+
+.day-next {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  max-width: 100%;
+  height: 38px;
+  padding: 0 0.95rem;
+  border: 1px solid rgba($pink, 0.45);
+  border-radius: 999px;
+  background: rgba($pink, 0.1);
+  box-shadow: none;
+  color: #fff;
+  font-size: 13px;
+
+  &:hover {
+    background: rgba($pink, 0.2);
+  }
+
+  &:focus {
+    box-shadow: none;
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba($pink, 0.7);
+    outline-offset: 2px;
+  }
+}
+
+.day-next-label {
+  color: $pink;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.day-next-title {
+  overflow: hidden;
+  max-width: 220px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.day-next-time {
+  color: rgba(255, 255, 255, 0.7);
+  font-variant-numeric: tabular-nums;
+}

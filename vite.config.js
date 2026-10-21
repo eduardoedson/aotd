@@ -8,6 +8,10 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     server: {
       port: Number(env.PORT) || 7115,
+      // Forward the push API to a locally running push server (server/).
+      proxy: {
+        '/api/push': `http://127.0.0.1:${env.PUSH_SERVER_PORT || 3100}`,
+      },
     },
     preview: {
       port: Number(env.PORT) || 7115,
@@ -15,6 +19,7 @@ export default defineConfig(({ mode }) => {
     test: {
       environment: 'jsdom',
       setupFiles: './src/setupTests.js',
+      include: ['src/**/*.test.{js,jsx,ts,tsx}'],
     },
   };
 });

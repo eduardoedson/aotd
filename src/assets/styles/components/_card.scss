@@ -93,6 +93,23 @@
     text-shadow: 0 2px 12px rgba(0, 0, 0, 0.9);
   }
 
+  .card-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .card-time {
+    padding: 0.3rem 0.6rem;
+    border-radius: 999px;
+    background: rgba(4, 11, 21, 0.72);
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 13px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    backdrop-filter: blur(10px);
+  }
+
   .card-episode {
     display: flex;
     align-items: center;
@@ -283,19 +300,44 @@
   }
 }
 
+// Touch screens have no hover: the links, calendar button and countdown are
+// always visible in the top left corner instead.
 @media (hover: none) {
   .card {
-    .card-hover-content,
-    .card-subcontent {
+    .card-hover-content {
       display: none;
     }
+
     .card-summary {
       opacity: 1;
       transform: none;
     }
+
     .card-image {
       opacity: 1;
       transform: none;
+    }
+
+    .card-subcontent {
+      top: 0.85rem;
+      right: 4rem;
+      bottom: auto;
+      left: 0.85rem;
+      width: auto;
+      align-items: flex-start;
+      opacity: 1;
+      transform: none;
+    }
+
+    .card-subcontent-links {
+      justify-content: flex-start;
+    }
+
+    .card-subcontent-timer {
+      padding: 0.3rem 0.6rem;
+      border-radius: 999px;
+      background: rgba(4, 11, 21, 0.72);
+      backdrop-filter: blur(10px);
     }
   }
 }
@@ -305,4 +347,12 @@
     max-width: 360px;
     height: 510px;
   }
+}
+
+.card-container.is-highlighted .card {
+  border-color: var(--card-accent);
+  box-shadow:
+    0 0 0 3px var(--card-accent),
+    0 26px 60px rgba(0, 0, 0, 0.38);
+  transition: box-shadow 300ms ease;
 }
