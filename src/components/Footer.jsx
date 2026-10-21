@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { openConsentDialog } from '../services/consent';
+import { openConsentDialog } from '../services/privacy';
 
 function Footer() {
   const [year] = useState(() => new Date().getUTCFullYear());

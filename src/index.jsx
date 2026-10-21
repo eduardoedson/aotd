@@ -8,7 +8,7 @@ import RouteError from './pages/RouteError';
 import ErrorPage from './pages/Error';
 import { registerServiceWorker } from './services/serviceWorker';
 import { initMonitoring } from './services/monitoring';
-import { initConsent } from './services/consent';
+import { initConsent } from './services/privacy';
 
 // Self-hosted font: no request to Google Fonts, so no visitor IP is shared with Google.
 import '@fontsource/roboto/latin-400.css';

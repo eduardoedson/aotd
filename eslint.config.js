@@ -65,6 +65,10 @@ export default [
     rules: { 'react-refresh/only-export-components': 'off' },
   },
   {
+    files: ['**/*.cjs'],
+    languageOptions: { sourceType: 'commonjs', globals: globals.node },
+  },
+  {
     files: ['public/sw.js'],
     languageOptions: { sourceType: 'script', globals: globals.serviceworker },
   },

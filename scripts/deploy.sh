@@ -7,17 +7,18 @@
 #   ./scripts/deploy.sh               # upload changed files, build on the server, restart
 #   ./scripts/deploy.sh --check       # run lint, typecheck and unit tests locally first
 #   ./scripts/deploy.sh --full        # upload every file, ignoring the change check
-#   ./scripts/deploy.sh --web-only    # build the site but leave the push server alone
+#   ./scripts/deploy.sh --web-only    # build the site but skip COMMAND (push server)
 #   ./scripts/deploy.sh --clean       # drop old hashed assets instead of keeping them
 #
 # Steps:
-#   1. Loads credentials from scripts/.env
+#   1. Loads credentials from scripts/.env (same format as the Akaread scripts)
 #   2. Uploads the project over SFTP, skipping unchanged files and removing on the
 #      server the files deleted locally from the code folders
 #   3. On the server: npm install and a build into a temporary folder, which then
 #      replaces dist/ in one move, so the site never serves a half built folder.
 #      Old hashed assets are copied over, so tabs opened before the deploy keep working
-#   4. Push server: npm install and pm2 reload (pm2 start on the first deploy)
+#   4. Runs COMMAND from scripts/.env (default: npm install in server/ and a pm2
+#      reload of the push server, or pm2 start on the first deploy)
 #   5. Waits until the site and the push API answer again
 #
 # Requires: python 3.8+ with paramiko (installed automatically), curl
@@ -146,21 +147,31 @@ def load_env(path):
     return values
 
 env = load_env(os.environ["DEPLOY_ENV_FILE"])
-for key in ("DEPLOY_HOST", "DEPLOY_USER", "DEPLOY_PATH"):
+for key in ("WEB_HOST", "WEB_USER", "WEB_PATH"):
     if not env.get(key):
         die(f"{key} not found in scripts/.env")
-if not env.get("DEPLOY_PASSWORD") and not env.get("DEPLOY_KEY_PATH"):
-    die("Set DEPLOY_KEY_PATH (recommended) or DEPLOY_PASSWORD in scripts/.env")
+if not env.get("WEB_PASSWORD") and not env.get("WEB_KEY_PATH"):
+    die("Set WEB_PASSWORD or WEB_KEY_PATH in scripts/.env")
 
-HOST = env["DEPLOY_HOST"]
-PORT = int(env.get("DEPLOY_PORT") or 22)
-USER = env["DEPLOY_USER"]
-PASSWORD = env.get("DEPLOY_PASSWORD") or None
-KEY_PATH = os.path.expanduser(env["DEPLOY_KEY_PATH"]) if env.get("DEPLOY_KEY_PATH") else None
-KEY_PASSPHRASE = env.get("DEPLOY_KEY_PASSPHRASE") or None
-REMOTE_ROOT = env["DEPLOY_PATH"].rstrip("/") or "/"
+HOST = env["WEB_HOST"]
+PORT = int(env.get("WEB_PORT") or 22)
+USER = env["WEB_USER"]
+PASSWORD = env.get("WEB_PASSWORD") or None
+KEY_PATH = os.path.expanduser(env["WEB_KEY_PATH"]) if env.get("WEB_KEY_PATH") else None
+REMOTE_ROOT = env["WEB_PATH"].rstrip("/") or "/"
 PM2_NAME = env.get("PM2_NAME") or "aotd-push"
 SITE_URL = (env.get("SITE_URL") or "https://aotd.eduardoalves.tech").rstrip("/")
+# Runs after the build, from the project root on the server
+DEFAULT_COMMAND = (
+    "cd server && "
+    "if [ ! -f .env ]; then echo 'server/.env is missing: create it from .env.example first'; exit 2; fi && "
+    "npm install --omit=dev --no-audit --no-fund && "
+    f"(pm2 describe {PM2_NAME} >/dev/null 2>&1 "
+    "&& pm2 reload ecosystem.config.cjs --update-env "
+    "|| pm2 start ecosystem.config.cjs) && "
+    "pm2 save"
+)
+COMMAND = env.get("COMMAND") or DEFAULT_COMMAND
 
 LOCAL_ROOT = os.environ["DEPLOY_ROOT_DIR"]
 FULL_UPLOAD = os.environ.get("DEPLOY_FULL_UPLOAD") == "true"
@@ -168,11 +179,11 @@ WEB_ONLY = os.environ.get("DEPLOY_WEB_ONLY") == "true"
 CLEAN_ASSETS = os.environ.get("DEPLOY_CLEAN_ASSETS") == "true"
 VERSION = os.environ.get("DEPLOY_VERSION") or "unknown"
 
-# Never uploaded, at any depth: dependencies, build output, tooling and local data
+# Never uploaded, at any depth: WEB_IGNORED_FOLDER plus the build output, which is made on the server
+DEFAULT_IGNORED = "node_modules,.history,.git,.vscode,design,coverage,playwright-report,test-results,_to_delete"
 IGNORED_NAMES = {
-    "node_modules", "dist", ".dist-next", ".dist-old", ".git", ".history", ".vscode",
-    "design", "coverage", "playwright-report", "test-results", "_to_delete", ".DS_Store",
-}
+    item.strip() for item in (env.get("WEB_IGNORED_FOLDER") or DEFAULT_IGNORED).split(",") if item.strip()
+} | {"dist", ".dist-next", ".dist-old", ".DS_Store"}
 # Never uploaded, by path: secrets and data that only exist on the server
 IGNORED_PATHS = {"scripts/.env", "server/.env", "server/data"}
 # Code folders mirror the local copy exactly: files deleted locally are removed remotely
@@ -194,7 +205,6 @@ def connect():
         username=USER,
         password=PASSWORD,
         key_filename=KEY_PATH,
-        passphrase=KEY_PASSPHRASE,
         look_for_keys=False,
         allow_agent=False,
         timeout=30,
@@ -352,22 +362,13 @@ build_command = (
 run_step(build_command, "Server build failed, the live site was not changed")
 success("  Build finished and published to dist/")
 
-# ── Step 3: push server ────────────────────────────────────────────────────
+# ── Step 3: COMMAND ────────────────────────────────────────────────────────
 if WEB_ONLY:
-    warn("Step 3/4: push server skipped (--web-only)")
+    warn("Step 3/4: COMMAND skipped (--web-only)")
 else:
-    info(f"Step 3/4: restarting the push server ({PM2_NAME})")
-    push_command = (
-        f"cd {root}/server && "
-        "if [ ! -f .env ]; then echo 'server/.env is missing: create it from .env.example first'; exit 2; fi && "
-        "npm install --omit=dev --no-audit --no-fund && "
-        f"(pm2 describe {shlex.quote(PM2_NAME)} >/dev/null 2>&1 "
-        "&& pm2 reload ecosystem.config.cjs --update-env "
-        "|| pm2 start ecosystem.config.cjs) && "
-        "pm2 save"
-    )
-    run_step(push_command, "Push server restart failed, the site itself is already live")
-    success(f"  pm2 process {PM2_NAME} is running")
+    info(f"Step 3/4: running COMMAND ({'push server restart' if COMMAND == DEFAULT_COMMAND else COMMAND})")
+    run_step(f"cd {root} && {COMMAND}", "COMMAND failed, the site itself is already live")
+    success("  COMMAND finished")
 
 try:
     sftp.close()

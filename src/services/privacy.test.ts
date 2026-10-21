@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { consentStore, initConsent, setConsent } from './consent';
+import { consentStore, initConsent, setConsent } from './privacy';
 
 const gaScript = () => document.querySelector('script[src*="googletagmanager"]');
 

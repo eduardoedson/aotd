@@ -1,6 +1,6 @@
 @use '../settings/variables' as *;
 
-.consent {
+.privacy-prompt {
   position: fixed;
   right: 1rem;
   bottom: 1rem;
@@ -28,7 +28,7 @@
   }
 }
 
-.consent-actions {
+.privacy-prompt-actions {
   display: flex;
   justify-content: flex-end;
   gap: 0.6rem;
@@ -51,14 +51,14 @@
   }
 }
 
-.consent-reject {
+.privacy-prompt-reject {
   border: 1px solid rgba(255, 255, 255, 0.2);
   background: transparent;
   box-shadow: none;
   color: #fff;
 }
 
-.consent-accept {
+.privacy-prompt-accept {
   border: 0;
   background: $pink;
   color: #fff;

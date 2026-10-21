@@ -1,7 +1,7 @@
 import { Outlet, ScrollRestoration } from 'react-router-dom';
 import InfoBar from '../components/InfoBar';
 import Footer from '../components/Footer';
-import CookieConsent from '../components/CookieConsent';
+import PrivacyPrompt from '../components/PrivacyPrompt';
 
 function Root() {
   return (
@@ -14,7 +14,7 @@ function Root() {
         <Outlet />
       </main>
       <Footer />
-      <CookieConsent />
+      <PrivacyPrompt />
       <ScrollRestoration />
     </div>
   );

@@ -72,23 +72,7 @@ design/           ficheiros PSD (ignorados pelo Git)
 
 ## Deploy
 
-O workflow `.github/workflows/ci.yml` corre lint, tipos, formatação, testes unitários, testes do servidor de push, testes E2E e build em cada push. Num push para `main`, publica o `dist/` e o servidor de push por `rsync` com chave SSH.
-
-Secrets do repositório (Settings > Secrets and variables > Actions, ambiente `production`):
-
-| Secret               | Valor                                                          |
-| -------------------- | -------------------------------------------------------------- |
-| `DEPLOY_HOST`        | IP ou domínio do servidor                                      |
-| `DEPLOY_USER`        | `eduardoalves-aotd`                                            |
-| `DEPLOY_PATH`        | `/home/eduardoalves-aotd/htdocs/aotd.eduardoalves.tech/dist`   |
-| `DEPLOY_SSH_KEY`     | chave privada dedicada ao deploy                               |
-| `DEPLOY_KNOWN_HOSTS` | saída de `ssh-keyscan <host>`                                  |
-| `PUSH_PATH`          | `/home/eduardoalves-aotd/htdocs/aotd.eduardoalves.tech/server` |
-| `VITE_SENTRY_DSN`    | opcional, DSN do projeto no Sentry                             |
-
-### Deploy manual
-
-`scripts/deploy.sh` envia o projeto por SFTP (só os ficheiros alterados) e faz o build no servidor, sem precisar do GitHub Actions. O build é gerado numa pasta temporária e só substitui o `dist/` se correr bem, por isso um build falhado não afeta o site. Copie `scripts/.env.example` para `scripts/.env` e preencha.
+`scripts/deploy.sh` envia o projeto por SFTP (só os ficheiros alterados) e faz o build no servidor. O build é gerado numa pasta temporária e só substitui o `dist/` se correr bem, por isso um build falhado não afeta o site. Copie `scripts/.env.example` para `scripts/.env` e preencha.
 
 ```bash
 ./scripts/deploy.sh               # envia, faz o build no servidor e reinicia o push
@@ -105,9 +89,9 @@ Secrets do repositório (Settings > Secrets and variables > Actions, ambiente `p
 
 ### Servidor de push
 
-Corre no pm2 com o utilizador do site, na porta da app Node.js do CloudPanel.
+Corre no pm2 do utilizador definido em `WEB_USER` (o mesmo que faz o deploy), na porta da app Node.js do CloudPanel.
 
-1. Como `eduardoalves-aotd`, em `/home/eduardoalves-aotd/htdocs/aotd.eduardoalves.tech/server`: `npm install --omit=dev` e `npm run generate-vapid`.
+1. Em `/home/eduardoalves-aotd/htdocs/aotd.eduardoalves.tech/server`: `npm install --omit=dev` e `npm run generate-vapid`.
 2. Crie `server/.env` a partir de `server/.env.example`, com as chaves geradas e `PORT` igual à porta da app.
 3. Rode `pm2 start ecosystem.config.cjs && pm2 save`. Para o pm2 arrancar com o servidor, rode `pm2 startup` uma vez e siga a instrução que ele mostra.
 
