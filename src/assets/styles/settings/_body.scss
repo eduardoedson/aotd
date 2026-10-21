@@ -58,20 +58,6 @@ html[data-theme='light'] body {
     linear-gradient(180deg, #f7faff, #eaf2f8);
   color: #162235;
 }
-html[data-theme='light'] .infoBar-container {
-  background: rgba(247, 250, 255, 0.8);
-}
-html[data-theme='light'] .home-intro h1,
-html[data-theme='light'] .library-header h1,
-html[data-theme='light'] .library-page h2 {
-  color: #111d2e;
-}
-html[data-theme='light'] .home-intro p,
-html[data-theme='light'] .day-summary,
-html[data-theme='light'] .library-header p {
-  color: rgba(17, 29, 46, 0.65);
-}
-
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

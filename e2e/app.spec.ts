@@ -114,12 +114,7 @@ test('touch targets are at least 44px on phones', async ({ page }, testInfo) => 
   await page.goto(`/${today()}`);
   await page.locator('article.card-container').first().waitFor();
 
-  for (const selector of [
-    '.card-favorite',
-    '.card-watch',
-    '.filters-chip',
-    '.calendar-view-toggle button',
-  ]) {
+  for (const selector of ['.card-favorite', '.filters-chip', '.calendar-view-toggle button']) {
     const box = await page.locator(selector).first().boundingBox();
     expect(box?.height, selector).toBeGreaterThanOrEqual(44);
     expect(box?.width, selector).toBeGreaterThanOrEqual(44);
@@ -128,11 +123,44 @@ test('touch targets are at least 44px on phones', async ({ page }, testInfo) => 
 
 test('active filters show as removable chips', async ({ page }) => {
   await mockAnilist(page);
-  await page.goto(`/${today()}?genre=Action&sort=popularity`);
+  await page.goto(`/${today()}?genre=Action&status=RELEASING`);
 
   const chips = page.getByRole('list', { name: 'Active filters' });
   await expect(chips.getByRole('button', { name: 'Remove filter Action' })).toBeVisible();
   await chips.getByRole('button', { name: 'Remove filter Action' }).click();
   await expect(page).not.toHaveURL(/genre=/);
-  await expect(page).toHaveURL(/sort=popularity/);
+  await expect(page).toHaveURL(/status=RELEASING/);
+});
+
+test('title search finds anime from any day', async ({ page }) => {
+  await mockAnilist(page);
+  await page.goto(`/${today()}`);
+
+  await page.getByRole('searchbox', { name: 'Search titles' }).fill('frieren');
+  const results = page.getByRole('region', { name: 'Search results from every day' });
+  await expect(results.getByText('Search Result for frieren')).toBeVisible();
+  await expect(results.getByRole('link', { name: 'Go to day' })).toBeVisible();
+});
+
+test('library lists favorites with their next episode', async ({ page }) => {
+  await mockAnilist(page);
+  await page.goto(`/${today()}`);
+  await page.getByRole('button', { name: 'Favorite Mock Anime 01' }).click();
+
+  await page.getByRole('link', { name: /My library/ }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'My library' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Up next' })).toBeVisible();
+  await expect(page.locator('.library-poster')).toHaveCount(1);
+  await expect(page.locator('.library-poster').getByText(/^Ep 3 on /)).toBeVisible();
+});
+
+test('header stays at the top while scrolling', async ({ page }) => {
+  await mockAnilist(page);
+  await page.goto(`/${today()}`);
+  await page.locator('article.card-container').first().waitFor();
+
+  await page.mouse.wheel(0, 1500);
+  await expect
+    .poll(async () => (await page.locator('.infoBar-container').boundingBox())?.y)
+    .toBe(0);
 });

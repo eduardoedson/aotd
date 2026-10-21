@@ -13,8 +13,6 @@ export interface FilterValues {
   favoritesOnly: boolean;
   status?: string;
   platform?: string;
-  time?: string;
-  sort?: string;
 }
 
 export interface ScheduleFilters extends FilterValues {
@@ -25,8 +23,6 @@ export interface ScheduleFilters extends FilterValues {
   setFavoritesOnly: (value: boolean) => void;
   setStatus: (value: string) => void;
   setPlatform: (value: string) => void;
-  setTime: (value: string) => void;
-  setSort: (value: string) => void;
   setView: (value: ScheduleView) => void;
   clear: () => void;
 }
@@ -40,8 +36,6 @@ export function useScheduleFilters(): ScheduleFilters {
   const favoritesOnly = searchParams.get('fav') === '1';
   const status = searchParams.get('status') ?? '';
   const platform = searchParams.get('platform') ?? '';
-  const time = searchParams.get('time') ?? '';
-  const sort = searchParams.get('sort') ?? 'time';
   const view: ScheduleView = searchParams.get('view') === 'week' ? 'week' : 'day';
 
   // Two quick changes (clear, then type) can happen before React Router renders
@@ -70,19 +64,13 @@ export function useScheduleFilters(): ScheduleFilters {
     favoritesOnly,
     status,
     platform,
-    time,
-    sort,
     view,
-    active: Boolean(
-      query || genre || favoritesOnly || status || platform || time || sort !== 'time',
-    ),
+    active: Boolean(query || genre || favoritesOnly || status || platform),
     setQuery: (value) => update('q', value),
     setGenre: (value) => update('genre', value),
     setFavoritesOnly: (value) => update('fav', value ? '1' : ''),
     setStatus: (value) => update('status', value),
     setPlatform: (value) => update('platform', value),
-    setTime: (value) => update('time', value),
-    setSort: (value) => update('sort', value === 'time' ? '' : value),
     setView: (value) => update('view', value === 'week' ? 'week' : ''),
     clear: () => {
       const next = new URLSearchParams();
@@ -95,7 +83,7 @@ export function useScheduleFilters(): ScheduleFilters {
 
 export function matchesFilters(
   item: AiringItem,
-  { query, genre, favoritesOnly, status = '', platform = '', time = '' }: FilterValues,
+  { query, genre, favoritesOnly, status = '', platform = '' }: FilterValues,
   isFavorite: (id: number) => boolean,
 ) {
   const { media } = item;
@@ -103,13 +91,6 @@ export function matchesFilters(
   if (genre && !(media.genres ?? []).includes(genre)) return false;
   if (status && media.status !== status) return false;
   if (platform && !(media.externalLinks ?? []).some((link) => link.site === platform)) return false;
-  if (time) {
-    const hour = new Date(item.airingAt * 1000).getHours();
-    if (time === 'morning' && (hour < 6 || hour >= 12)) return false;
-    if (time === 'afternoon' && (hour < 12 || hour >= 18)) return false;
-    if (time === 'evening' && (hour < 18 || hour >= 24)) return false;
-    if (time === 'night' && hour >= 6) return false;
-  }
 
   const needle = normalizeSearch(query);
   if (!needle) return true;
@@ -119,44 +100,14 @@ export function matchesFilters(
     .some((title) => normalizeSearch(title).includes(needle));
 }
 
-export const SORT_OPTIONS = [
-  { value: 'time', label: 'Sort by time' },
-  { value: 'popularity', label: 'Most popular' },
-  { value: 'title', label: 'Sort by title' },
-  { value: 'episode', label: 'Sort by episode' },
-];
-
-const byTitle = (a: AiringItem, b: AiringItem) =>
-  (a.media.title?.userPreferred ?? '').localeCompare(b.media.title?.userPreferred ?? '');
-
-// Returns a sorted copy; airing time breaks ties so the order is stable.
-export function sortItems(items: AiringItem[], sort = 'time') {
-  const copy = [...items];
-  switch (sort) {
-    case 'popularity':
-      return copy.sort(
-        (a, b) => (b.media.popularity ?? 0) - (a.media.popularity ?? 0) || a.airingAt - b.airingAt,
-      );
-    case 'title':
-      return copy.sort((a, b) => byTitle(a, b) || a.airingAt - b.airingAt);
-    case 'episode':
-      return copy.sort((a, b) => b.episode - a.episode || a.airingAt - b.airingAt);
-    default:
-      return copy.sort((a, b) => a.airingAt - b.airingAt);
-  }
-}
+// Airing order, as a copy so the loaded list is never mutated.
+export const byAiringTime = (items: AiringItem[]) =>
+  [...items].sort((a, b) => a.airingAt - b.airingAt);
 
 const STATUS_LABELS: Record<string, string> = {
   RELEASING: 'Releasing',
   FINISHED: 'Finished',
   NOT_YET_RELEASED: 'Upcoming',
-};
-
-const TIME_LABELS: Record<string, string> = {
-  morning: 'Morning',
-  afternoon: 'Afternoon',
-  evening: 'Evening',
-  night: 'Night',
 };
 
 export interface FilterChip {
@@ -184,23 +135,8 @@ export function activeFilterChips(filters: ScheduleFilters): FilterChip[] {
   if (filters.platform) {
     chips.push({ key: 'platform', label: filters.platform, remove: () => filters.setPlatform('') });
   }
-  if (filters.time) {
-    chips.push({
-      key: 'time',
-      label: TIME_LABELS[filters.time] ?? filters.time,
-      remove: () => filters.setTime(''),
-    });
-  }
   if (filters.favoritesOnly) {
     chips.push({ key: 'fav', label: 'Favorites', remove: () => filters.setFavoritesOnly(false) });
-  }
-  if (filters.sort && filters.sort !== 'time') {
-    const option = SORT_OPTIONS.find((item) => item.value === filters.sort);
-    chips.push({
-      key: 'sort',
-      label: option?.label ?? filters.sort,
-      remove: () => filters.setSort('time'),
-    });
   }
   return chips;
 }

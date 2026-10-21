@@ -1,0 +1,547 @@
+@use '../settings/variables' as *;
+
+// Light theme. Loaded last so it overrides the dark defaults. Schedule cards keep
+// their dark poster look on purpose, because their text sits on cover images.
+
+$ink: #162235;
+$ink-strong: #0d1726;
+$muted: rgba(22, 34, 53, 0.66);
+$faint: rgba(22, 34, 53, 0.5);
+$line: rgba(22, 34, 53, 0.12);
+$line-strong: rgba(22, 34, 53, 0.2);
+$surface: #ffffff;
+$surface-soft: rgba(255, 255, 255, 0.72);
+$surface-tint: rgba(22, 34, 53, 0.05);
+$pink-ink: #c8155e;
+// Dark version of the select arrow, the default one is white.
+$select-arrow-dark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23162235' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+
+html[data-theme='light'] {
+  color-scheme: light;
+
+  *::-webkit-scrollbar {
+    background: #e3ebf3;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background-color: #b9c7d6;
+  }
+
+  // Base controls
+  label {
+    color: $ink;
+  }
+
+  input {
+    background: $surface;
+    color: $ink;
+  }
+
+  select {
+    background:
+      $select-arrow-dark no-repeat right 0.8em center / 1.4em,
+      $surface;
+    color: $ink;
+  }
+
+  select option {
+    background-color: $surface;
+    color: $ink;
+  }
+
+  // Header
+  .infoBar-container {
+    border-bottom-color: $line;
+    background: rgba(247, 250, 255, 0.88);
+    box-shadow: 0 6px 24px rgba(22, 34, 53, 0.06);
+  }
+
+  .infoBar-library {
+    color: $muted;
+
+    &:hover {
+      color: $ink-strong;
+    }
+  }
+
+  .preferences-controls button {
+    border-color: $line;
+    background: $surface;
+    color: $muted;
+
+    &.is-active {
+      border-color: rgba($pink, 0.55);
+      color: $pink-ink;
+    }
+  }
+
+  .clock-container {
+    border-color: $line;
+    background: $surface;
+    color: $muted;
+  }
+
+  .calendar-view-toggle,
+  .timezone-toggle {
+    border-color: $line;
+    background: $surface;
+
+    button {
+      color: $muted;
+
+      &:hover,
+      &.is-active {
+        color: $ink-strong;
+      }
+    }
+  }
+
+  // Home and calendar
+  .home-intro h1,
+  .library-header h1,
+  .library-section-header h2,
+  .title-search-header h2 {
+    color: $ink-strong;
+  }
+
+  .home-intro p,
+  .day-summary,
+  .day-empty,
+  .day-inline-error,
+  .library-header p,
+  .title-search-header span,
+  .title-search-empty {
+    color: $muted;
+  }
+
+  .calendar-controllers {
+    border-color: $line;
+    background: $surface-soft;
+  }
+
+  .calendar-controller-selected {
+    color: $ink-strong;
+  }
+
+  .calendar-controller-button {
+    border-color: $line;
+    background: $surface;
+  }
+
+  .react-datepicker {
+    border-color: $line;
+    background: $surface;
+    color: $ink;
+  }
+
+  .react-datepicker__header {
+    border-bottom-color: $line;
+    background: linear-gradient(180deg, rgba($pink, 0.1), transparent);
+  }
+
+  .react-datepicker__current-month,
+  .react-datepicker__day:hover,
+  .react-datepicker__today-button:hover {
+    color: $ink-strong;
+  }
+
+  .react-datepicker__day-name {
+    color: $faint;
+  }
+
+  .react-datepicker__day {
+    color: $ink;
+
+    &:hover {
+      background: $surface-tint;
+    }
+  }
+
+  .react-datepicker__day--outside-month {
+    color: rgba(22, 34, 53, 0.3);
+  }
+
+  .react-datepicker__day--selected,
+  .react-datepicker__day--keyboard-selected {
+    color: #fff;
+  }
+
+  .react-datepicker__navigation {
+    border-color: $line;
+    background: $surface-tint;
+  }
+
+  .react-datepicker__navigation-icon::before {
+    border-color: $muted;
+  }
+
+  .react-datepicker__today-button {
+    border-top-color: $line;
+  }
+
+  .day-load-more,
+  .day-retry,
+  .day-next {
+    color: $ink-strong;
+  }
+
+  .day-next-time {
+    color: $muted;
+  }
+
+  // Filters
+  .filters-search-icon {
+    fill: $faint;
+  }
+
+  .filters-input,
+  .filters-select {
+    border-color: $line;
+    color: $ink;
+  }
+
+  .filters-input {
+    background: $surface;
+
+    &::placeholder {
+      color: $faint;
+    }
+  }
+
+  .filters-select {
+    background:
+      $select-arrow-dark no-repeat right 0.75em center / 1.1em,
+      $surface;
+  }
+
+  .filters-chip,
+  .filters-clear {
+    border-color: $line;
+    background: $surface;
+    color: $muted;
+
+    &:hover,
+    &.is-active {
+      color: $ink-strong;
+    }
+  }
+
+  .filters-hint,
+  .filter-chip-clear {
+    color: $muted;
+  }
+
+  .filter-chip {
+    color: $ink-strong;
+  }
+
+  .filter-chip-remove {
+    background: $surface-tint;
+  }
+
+  // Round action buttons on light panels. Buttons over cover images (schedule
+  // cards, library posters) keep their dark glass look.
+  .detail-layout,
+  .library-upnext-actions {
+    .favorite-button,
+    .calendar-add-button,
+    .share-button,
+    .watch-button,
+    .notify-toggle {
+      border-color: $line-strong;
+      background: $surface;
+      color: $ink;
+
+      &:hover {
+        color: $ink-strong;
+      }
+
+      &.is-active {
+        color: $pink-ink;
+      }
+    }
+  }
+
+  .calendar-menu-list {
+    border-color: $line;
+    background: $surface;
+    box-shadow: 0 16px 40px rgba(22, 34, 53, 0.16);
+
+    a,
+    button {
+      color: $ink;
+    }
+  }
+
+  // Week view
+  .week-column,
+  .week-tab {
+    border-color: $line;
+    background: $surface-soft;
+  }
+
+  .week-column-header {
+    border-bottom-color: $line;
+
+    span {
+      color: $faint;
+    }
+  }
+
+  .week-item {
+    background: $surface;
+  }
+
+  .week-item-link,
+  .week-tab strong {
+    color: $ink-strong;
+  }
+
+  .week-item-time,
+  .week-item-episode,
+  .week-tab {
+    color: $muted;
+  }
+
+  .week-empty {
+    color: $faint;
+  }
+
+  // Global title search
+  .title-search {
+    border-color: $line;
+    background: $surface-soft;
+  }
+
+  .title-search-item {
+    border-color: $line;
+    background: $surface;
+  }
+
+  .title-search-link {
+    color: $ink-strong;
+  }
+
+  .title-search-text small,
+  .title-search-next.is-muted {
+    color: $muted;
+  }
+
+  .title-search-placeholder {
+    background: $surface-tint;
+  }
+
+  .title-search-day {
+    border-color: $line-strong;
+    color: $ink;
+
+    &:hover,
+    &:focus-visible {
+      color: $ink-strong;
+    }
+  }
+
+  // Detail page
+  .detail-layout {
+    border-color: $line;
+    background: rgba(255, 255, 255, 0.86);
+    box-shadow: 0 20px 60px rgba(22, 34, 53, 0.1);
+  }
+
+  .detail-title {
+    color: $ink-strong;
+  }
+
+  .detail-description {
+    color: $muted;
+
+    a {
+      color: $pink-ink;
+    }
+  }
+
+  .detail-back {
+    color: $muted;
+  }
+
+  .home-intro-eyebrow,
+  .calendar-today {
+    color: $pink-ink;
+  }
+
+  .detail-backdrop::after {
+    background: linear-gradient(180deg, rgba(238, 244, 250, 0.4), rgba(238, 244, 250, 0.95) 70%);
+  }
+
+  .detail-next,
+  .detail-category-line .detail-category,
+  .detail-relation {
+    border-color: $line;
+    background: $surface;
+  }
+
+  .detail-next-info strong,
+  .detail-episode-banner strong,
+  .detail-relation,
+  .detail-back:hover,
+  .detail-back:focus-visible,
+  .star-rating-value {
+    color: $ink-strong;
+  }
+
+  .detail-cover {
+    border-color: $line;
+  }
+
+  .detail-category-description,
+  .detail-category-description-inline,
+  .detail-episode-status,
+  .tag-container,
+  .miniCard-text {
+    color: $ink;
+  }
+
+  .detail-category-description a {
+    color: $ink-strong;
+    text-decoration-color: $line-strong;
+  }
+
+  .detail-neighbour {
+    border-color: $line;
+    background: $surface;
+    color: $ink-strong;
+  }
+
+  .detail-episode-banner {
+    background: $surface;
+  }
+
+  .detail-relation img,
+  .detail-relation .detail-relation-placeholder {
+    background: $surface-tint;
+  }
+
+  .detail-trailer {
+    border-color: $line;
+  }
+
+  .miniCard-container {
+    border-color: $line;
+    background: $surface;
+  }
+
+  .star-rating-base {
+    color: rgba(22, 34, 53, 0.18);
+  }
+
+  .star-rating-value small {
+    color: $faint;
+  }
+
+  // Library
+  .library-header {
+    border-color: $line;
+    background:
+      radial-gradient(circle at 100% 0%, rgba($pink, 0.12), transparent 22rem),
+      radial-gradient(circle at 0% 100%, rgba($blue, 0.14), transparent 20rem), $surface-soft;
+  }
+
+  .library-back,
+  .library-clear,
+  .library-stat span,
+  .library-empty p,
+  .library-poster-text small,
+  .library-upnext-link small,
+  .library-history-link small {
+    color: $muted;
+  }
+
+  .library-back:hover,
+  .library-back:focus-visible,
+  .library-stat strong,
+  .library-empty strong,
+  .library-poster-link,
+  .library-upnext-link,
+  .library-history-link {
+    color: $ink-strong;
+  }
+
+  .library-stat,
+  .library-poster,
+  .library-upnext-item,
+  .library-history-link {
+    border-color: $line;
+    background: $surface;
+  }
+
+  .library-clear,
+  .library-empty {
+    border-color: $line-strong;
+  }
+
+  .library-section-header h2 span {
+    color: $pink-ink;
+  }
+
+  .library-upnext-link em {
+    color: $pink-ink;
+  }
+
+  .library-sort select {
+    border-color: $line;
+    box-shadow: none;
+    background:
+      $select-arrow-dark no-repeat right 0.75em center / 1.1em,
+      $surface;
+    color: $ink;
+  }
+
+  .library-placeholder {
+    background: $surface-tint;
+  }
+
+  // Loading and misc
+  .skeleton-block,
+  .skeleton-line {
+    background: linear-gradient(
+      90deg,
+      rgba(22, 34, 53, 0.06) 25%,
+      rgba(22, 34, 53, 0.12) 50%,
+      rgba(22, 34, 53, 0.06) 75%
+    );
+    background-size: 200% 100%;
+  }
+
+  .privacy-prompt {
+    border-color: $line;
+    background: rgba(255, 255, 255, 0.97);
+    box-shadow: 0 16px 40px rgba(22, 34, 53, 0.16);
+
+    p {
+      color: $muted;
+    }
+  }
+
+  .privacy-prompt-reject {
+    border-color: $line-strong;
+    color: $ink;
+  }
+
+  .privacy-prompt-accept {
+    color: #fff;
+  }
+
+  .footer-container {
+    border-top-color: $line;
+    background: rgba(255, 255, 255, 0.6);
+  }
+
+  .footer-content,
+  .footer-link-button {
+    color: $muted;
+  }
+
+  .footer-data-provider a {
+    color: $ink;
+  }
+}

@@ -129,6 +129,51 @@ export async function mockAnilist(page: Page) {
         },
       });
     }
+    if (name === 'SearchAnime') {
+      const airingAt = Math.floor(Date.now() / 1000) + 3 * 86400;
+      return route.fulfill({
+        json: {
+          data: {
+            Page: {
+              media: [
+                {
+                  id: 9001,
+                  status: 'RELEASING',
+                  format: 'TV',
+                  episodes: 24,
+                  seasonYear: 2026,
+                  title: { userPreferred: `Search Result for ${variables.search}` },
+                  coverImage: {
+                    medium: 'https://s4.anilist.co/s.png',
+                    large: null,
+                    color: '#5da0e4',
+                  },
+                  nextAiringEpisode: { episode: 5, airingAt },
+                },
+              ],
+            },
+          },
+        },
+      });
+    }
+    if (name === 'FavoriteNextEpisodes') {
+      const airingAt = Math.floor(Date.now() / 1000) + 2 * 86400;
+      const ids = (variables.ids as unknown as number[]) ?? [];
+      return route.fulfill({
+        json: {
+          data: {
+            Page: {
+              media: ids.map((id, index) => ({
+                id,
+                title: { userPreferred: `Mock ${id}` },
+                coverImage: { medium: 'https://s4.anilist.co/f.png' },
+                nextAiringEpisode: { episode: 3 + index, airingAt: airingAt + index * 3600 },
+              })),
+            },
+          },
+        },
+      });
+    }
     if (name === 'MediaDetail') {
       return route.fulfill({ json: { data: { Media: mediaDetail(variables.id, Date.now()) } } });
     }

@@ -1,6 +1,5 @@
 import { useId } from 'react';
 import { GENRES } from '../services/globals';
-import { SORT_OPTIONS } from '../services/filters';
 import {
   disableNotifications,
   enableNotifications,
@@ -115,34 +114,6 @@ function ScheduleFilters({ filters }) {
           <option value=''>All platforms</option>
           {['Crunchyroll', 'Netflix', 'HIDIVE', 'YouTube', 'Bilibili TV'].map((site) => (
             <option key={site}>{site}</option>
-          ))}
-        </select>
-      </div>
-      <div className='filters-field filters-secondary'>
-        <select
-          className='filters-select'
-          aria-label='Airing time'
-          value={filters.time}
-          onChange={(event) => filters.setTime(event.target.value)}
-        >
-          <option value=''>Any time</option>
-          <option value='morning'>Morning</option>
-          <option value='afternoon'>Afternoon</option>
-          <option value='evening'>Evening</option>
-          <option value='night'>Night</option>
-        </select>
-      </div>
-      <div className='filters-field filters-secondary'>
-        <select
-          className='filters-select'
-          aria-label='Sort schedule'
-          value={filters.sort}
-          onChange={(event) => filters.setSort(event.target.value)}
-        >
-          {SORT_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
           ))}
         </select>
       </div>

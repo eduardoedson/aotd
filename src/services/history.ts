@@ -19,3 +19,5 @@ export function addHistory(item: Omit<HistoryItem, 'viewedAt'>) {
 }
 
 export const useHistory = () => historyStore.useValue();
+
+export const clearHistory = () => historyStore.set([]);

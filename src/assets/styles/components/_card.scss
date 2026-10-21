@@ -50,15 +50,6 @@
     z-index: 3;
   }
 
-  .card-watch {
-    position: absolute;
-    top: 0.85rem;
-    left: 0.85rem;
-    z-index: 3;
-    width: 38px;
-    padding: 0;
-  }
-
   .card-content {
     position: absolute;
     inset: 0;
@@ -384,7 +375,37 @@ html[data-density='compact'] {
 // paint until they scroll close, which keeps long schedules smooth.
 .day-container > .card-container {
   content-visibility: auto;
-  contain-intrinsic-size: auto 410px;
+  contain-intrinsic-size: auto 426px;
+  // content-visibility clips painting to the box, so leave room for the
+  // hover lift (translateY(-7px)) and the shadow.
+  padding-block: 8px;
+  // Paint containment would also cut the card shadow into a visible rectangle;
+  // this lets painting overflow the box by the shadow size.
+  overflow-clip-margin: 64px;
+}
+
+// Long titles and descriptions end with an ellipsis instead of being cut mid line.
+.card .card-title,
+.card .card-hover-content h3 {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.card .card-hover-content h3 {
+  flex: 0 0 auto;
+  -webkit-line-clamp: 2;
+}
+
+.card .card-description {
+  flex: 0 1 auto;
+  min-height: 0;
+  -webkit-line-clamp: 6;
+}
+
+html[data-density='compact'] .card .card-description {
+  -webkit-line-clamp: 3;
 }
 
 .card .card-summary .badges {

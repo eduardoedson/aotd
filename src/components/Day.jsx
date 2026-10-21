@@ -7,11 +7,10 @@ import Error from './Error';
 import NextEpisodeJump from './NextEpisodeJump';
 import { useDaySchedule } from '../services/schedule';
 import { useFavorites } from '../services/favorites';
-import { matchesFilters, sortItems } from '../services/filters';
+import { byAiringTime, matchesFilters } from '../services/filters';
 import { scheduleSearch, setScheduleContext } from '../services/navigation';
 import { useInfiniteScroll } from '../services/useInfiniteScroll';
 import { formatLongDate, getToday } from '../services/globals';
-import { usePreferences } from '../services/preferences';
 
 const NO_FILTERS = {
   query: '',
@@ -19,8 +18,6 @@ const NO_FILTERS = {
   favoritesOnly: false,
   status: '',
   platform: '',
-  time: '',
-  sort: 'time',
   active: false,
 };
 const SKELETON_COUNT = 8;
@@ -29,33 +26,26 @@ const PRIORITY_CARDS = 4;
 
 function Day({ date, timeZone = 'utc', filters = NO_FILTERS }) {
   const { search } = useLocation();
-  // Sorting alone does not need every page; any real filter does.
-  const filtering =
-    Boolean(filters.query || filters.genre || filters.favoritesOnly) ||
-    Boolean(filters.status || filters.platform || filters.time);
+  // With a filter active every page is loaded, so the matches cover the whole day.
+  const filtering = Boolean(
+    filters.query || filters.genre || filters.favoritesOnly || filters.status || filters.platform,
+  );
   const { items, error, hasNextPage, loading, initialLoading, loadMore, retry } = useDaySchedule(
     date,
     timeZone,
     { loadAll: filtering },
   );
   const { isFavorite } = useFavorites();
-  const preferences = usePreferences();
 
-  const { query, genre, favoritesOnly, status, platform, time, sort } = filters;
-  // Adult titles only count when the visitor chose to see them.
-  const allowedItems = useMemo(
-    () => items.filter((item) => preferences.showAdult || !item.media.isAdult),
-    [items, preferences.showAdult],
-  );
+  const { query, genre, favoritesOnly, status, platform } = filters;
   const visibleItems = useMemo(
     () =>
-      sortItems(
-        allowedItems.filter((item) =>
-          matchesFilters(item, { query, genre, favoritesOnly, status, platform, time }, isFavorite),
+      byAiringTime(
+        items.filter((item) =>
+          matchesFilters(item, { query, genre, favoritesOnly, status, platform }, isFavorite),
         ),
-        sort,
       ),
-    [allowedItems, query, genre, favoritesOnly, status, platform, time, sort, isFavorite],
+    [items, query, genre, favoritesOnly, status, platform, isFavorite],
   );
 
   // The detail page uses this order for its previous and next links.
@@ -102,7 +92,7 @@ function Day({ date, timeZone = 'utc', filters = NO_FILTERS }) {
   }
 
   const finished = !hasNextPage && !loading;
-  const countLabel = `${allowedItems.length}${hasNextPage ? '+' : ''} episode${allowedItems.length === 1 ? '' : 's'}`;
+  const countLabel = `${items.length}${hasNextPage ? '+' : ''} episode${items.length === 1 ? '' : 's'}`;
   const summary = filters.active
     ? `${visibleItems.length} of ${countLabel} match your filters`
     : `${countLabel} airing on this day`;

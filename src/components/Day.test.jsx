@@ -65,15 +65,16 @@ describe('Day', () => {
     expect(
       await screen.findByRole('heading', { name: 'First Show', level: 2 }),
     ).toBeInTheDocument();
-    expect(screen.queryByText('Adult Show')).not.toBeInTheDocument();
-    expect(screen.getByText('1+ episode airing on this day')).toBeInTheDocument();
+    // Adult titles are always shown.
+    expect(screen.getByRole('heading', { name: 'Adult Show', level: 2 })).toBeInTheDocument();
+    expect(screen.getByText('2+ episodes airing on this day')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Load more episodes' }));
 
     expect(
       await screen.findByRole('heading', { name: 'Second Show', level: 2 }),
     ).toBeInTheDocument();
-    expect(screen.getByText('2 episodes airing on this day')).toBeInTheDocument();
+    expect(screen.getByText('3 episodes airing on this day')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Load more episodes' })).not.toBeInTheDocument();
   });
 

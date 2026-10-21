@@ -19,7 +19,6 @@ export const SCHEDULE_QUERY = /* GraphQL */ `
           episodes
           status
           format
-          popularity
           genres
           description(asHtml: false)
           title {
@@ -205,7 +204,6 @@ export interface ScheduleMedia {
   episodes: number | null;
   status: string | null;
   format?: string | null;
-  popularity?: number | null;
   genres: string[] | null;
   description: string | null;
   title: { userPreferred: string | null; romaji: string | null; english: string | null } | null;

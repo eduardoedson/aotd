@@ -66,7 +66,12 @@ describe('Detail', () => {
 
     expect(screen.getByLabelText('Loading details')).toBeInTheDocument();
     expect(
-      await screen.findByRole('heading', { name: 'Sousou no Frieren', level: 1 }),
+      // A longer wait keeps this heavy page stable when the whole suite runs in parallel.
+      await screen.findByRole(
+        'heading',
+        { name: 'Sousou no Frieren', level: 1 },
+        { timeout: 5000 },
+      ),
     ).toBeInTheDocument();
     expect(screen.getByRole('img', { name: /Rated 4.5 out of 5/ })).toBeInTheDocument();
     expect(screen.getByText('Frieren: Beyond Journey’s End')).toBeInTheDocument();

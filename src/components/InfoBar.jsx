@@ -60,15 +60,6 @@ function InfoBar() {
         >
           ▦
         </button>
-        <button
-          type='button'
-          className={preferences.showAdult ? 'is-active' : ''}
-          onClick={() => preferences.update({ showAdult: !preferences.showAdult })}
-          aria-pressed={preferences.showAdult}
-          title='Show adult titles'
-        >
-          18+
-        </button>
       </div>
       <TimeZoneToggle />
       <Clock />

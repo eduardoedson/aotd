@@ -5,6 +5,7 @@ import WeekView from './WeekView';
 import Error from './Error';
 import ScheduleFilters from './ScheduleFilters';
 import ActiveFilterChips from './ActiveFilterChips';
+import TitleSearchResults from './TitleSearchResults';
 import LeftArrow from '../assets/images/left_arrow.svg';
 import RightArrow from '../assets/images/right_arrow.svg';
 import {
@@ -148,6 +149,9 @@ function Calendar() {
 
       <ScheduleFilters filters={filters} />
       <ActiveFilterChips filters={filters} />
+      {filters.query ? (
+        <TitleSearchResults query={filters.query} date={date} timeZone={timeZone} />
+      ) : null}
 
       {isWeek ? (
         <WeekView

@@ -8,14 +8,17 @@
   width: 100%;
   height: $infobar-size;
   padding: 0 clamp(1rem, 4vw, 4rem);
-  background: rgba(5, 12, 22, 0.64);
+  background: rgba(5, 12, 22, 0.82);
   border-bottom: 1px solid rgba(255, 255, 255, 0.07);
   backdrop-filter: blur(16px);
-  position: relative;
-  z-index: 10;
+  // Stays at the top of the window while scrolling.
+  position: sticky;
+  top: 0;
+  z-index: 40;
 }
 
 .infoBar-library {
+  white-space: nowrap;
   color: rgba(255, 255, 255, 0.75);
   font-size: 13px;
   font-weight: 700;
@@ -49,8 +52,12 @@
     justify-content: space-between;
   }
 
+  .infoBar-container {
+    gap: 0.4rem;
+  }
+
+  // The clock does not fit next to the other controls on phones.
   .clock-container {
-    font-size: 11px;
-    padding: 0.4rem 0.6rem;
+    display: none;
   }
 }

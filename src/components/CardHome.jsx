@@ -4,7 +4,6 @@ import Timer from './Timer';
 import FavoriteButton from './FavoriteButton';
 import AddToCalendarButton from './AddToCalendarButton';
 import UpcomingOnly from './UpcomingOnly';
-import WatchButton from './WatchButton';
 import CardBadges from './CardBadges';
 import ShareButton from './ShareButton';
 import {
@@ -107,7 +106,6 @@ function CardHome({ item, date, search = '', timeZone = 'utc', priority = false 
           </div>
         </Link>
         <FavoriteButton className='card-favorite' id={media.id} title={title} image={imgSrc} />
-        <WatchButton className='card-watch' mediaId={media.id} episode={episode} />
         <div className='card-subcontent'>
           <div className='card-subcontent-links'>
             {links.map((link) => (

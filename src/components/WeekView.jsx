@@ -4,7 +4,7 @@ import FavoriteButton from './FavoriteButton';
 import Error from './Error';
 import { useSchedule } from '../services/schedule';
 import { useFavorites } from '../services/favorites';
-import { matchesFilters, sortItems } from '../services/filters';
+import { byAiringTime, matchesFilters } from '../services/filters';
 import { usePreferences } from '../services/preferences';
 import { accentFor } from '../services/color';
 import { setScheduleContext } from '../services/navigation';
@@ -27,8 +27,6 @@ const NO_FILTERS = {
   favoritesOnly: false,
   status: '',
   platform: '',
-  time: '',
-  sort: 'time',
   active: false,
 };
 
@@ -53,16 +51,13 @@ function WeekView({ date, timeZone = 'utc', filters = NO_FILTERS }) {
     return value ? `?${value}` : '';
   }, [search]);
 
-  const { query, genre, favoritesOnly, status, platform, time, sort } = filters;
+  const { query, genre, favoritesOnly, status, platform } = filters;
   const byDay = useMemo(() => {
     const groups = Object.fromEntries(days.map((day) => [day, []]));
-    sortItems(
-      items
-        .filter((item) => preferences.showAdult || !item.media.isAdult)
-        .filter((item) =>
-          matchesFilters(item, { query, genre, favoritesOnly, status, platform, time }, isFavorite),
-        ),
-      sort,
+    byAiringTime(
+      items.filter((item) =>
+        matchesFilters(item, { query, genre, favoritesOnly, status, platform }, isFavorite),
+      ),
     ).forEach((item) => {
       const day = toIsoDateInZone(new Date(item.airingAt * 1000), timeZone);
       groups[day]?.push(item);
@@ -70,19 +65,7 @@ function WeekView({ date, timeZone = 'utc', filters = NO_FILTERS }) {
     return groups;
     // days is derived from date, which is part of the component key.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    items,
-    query,
-    genre,
-    favoritesOnly,
-    status,
-    platform,
-    time,
-    sort,
-    isFavorite,
-    timeZone,
-    preferences.showAdult,
-  ]);
+  }, [items, query, genre, favoritesOnly, status, platform, isFavorite, timeZone]);
 
   // Previous and next on the detail page follow the week in order.
   useEffect(() => {
@@ -102,8 +85,6 @@ function WeekView({ date, timeZone = 'utc', filters = NO_FILTERS }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [byDay, daySearch, loading]);
 
-  const allowedCount = items.filter((item) => preferences.showAdult || !item.media.isAdult).length;
-
   if (error && items.length === 0) {
     return (
       <Error msg={error.message}>
@@ -119,7 +100,7 @@ function WeekView({ date, timeZone = 'utc', filters = NO_FILTERS }) {
       <p className='day-summary' aria-live='polite'>
         {loading
           ? `Loading the week… ${items.length} episodes so far`
-          : `${allowedCount} episodes this week`}
+          : `${items.length} episodes this week`}
       </p>
 
       <div className='week-tabs' role='tablist' aria-label='Day of the week'>
