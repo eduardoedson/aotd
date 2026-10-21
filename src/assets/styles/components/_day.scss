@@ -1,10 +1,10 @@
 .day-container {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 2.5rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 270px));
+    gap: clamp(1.25rem, 2.5vw, 2rem);
     justify-content: center;
-    padding: 3rem 15rem 0 15rem;
+    width: 100%;
+    padding: clamp(2rem, 4vw, 3.5rem) 0 0;
 }
 
 .day-provider-data {
@@ -20,10 +20,8 @@
 
 @media screen and (max-width: 767px) {
     .day-container {
-        display: flex;
-        flex-direction: column;
-        padding: 0;
-        padding-top: 2rem;
+        grid-template-columns: minmax(0, 1fr);
+        padding-top: 1.75rem;
     }
 
     .day-provider-data {

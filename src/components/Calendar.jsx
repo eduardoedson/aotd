@@ -97,9 +97,43 @@ function Calendar() {
 						<DatePicker
 							// closeOnScroll={true}
 							withPortal
+							enableTabLoop={false}
 							fixedHeight
+							selected={selectedDate ? new Date(`${selectedDate}T00:00:00`) : null}
 							todayButton="Go To Today"
 							onSelect={changeDate}
+							renderCustomHeader={({
+								date: visibleMonth,
+								decreaseMonth,
+								increaseMonth,
+								prevMonthButtonDisabled,
+								nextMonthButtonDisabled
+							}) => (
+								<div className="calendar-picker-header">
+									<button
+										type="button"
+										className="calendar-picker-navigation"
+										onClick={decreaseMonth}
+										disabled={prevMonthButtonDisabled}
+										aria-label="Previous month"
+									>
+										<img src={LeftArrow} alt="" />
+									</button>
+									<div className="calendar-picker-heading">
+										<span>Choose a date</span>
+										<strong>{months[visibleMonth.getMonth()]} {visibleMonth.getFullYear()}</strong>
+									</div>
+									<button
+										type="button"
+										className="calendar-picker-navigation"
+										onClick={increaseMonth}
+										disabled={nextMonthButtonDisabled}
+										aria-label="Next month"
+									>
+										<img src={RightArrow} alt="" />
+									</button>
+								</div>
+							)}
 							customInput={<button type="button" className="calendar-controller-selected">{formatedDate}</button>}
 						/>
 						<button type="button" className="calendar-controller-button" onClick={advanceOneDay} aria-label="Advance one day">

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useQuery, gql } from '@apollo/client';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import LoadingDiv from '../components/Loading';
 import Tag from '../components/Tag';
 import MiniCard from '../components/MiniCard';
@@ -121,7 +121,7 @@ function Detail () {
         const withKeys = (children) => children
             .filter(Boolean)
             .map((child, index) => React.cloneElement(child, { key: child.key ?? index }));
-        const main = (children) => <div className='detail-content'>{children}</div>;
+        const main = (children) => <div className='detail-content' style={{ '--detail-accent': info.coverImage?.color || '#ff3d8d' }}>{children}</div>;
         
         const content = (children) =>  <div className='detail-split-content'>{withKeys(children)}</div>;
         const left = (children) =>  <div className='detail-split-content-left'>{withKeys(children)}</div>;
@@ -131,7 +131,7 @@ function Detail () {
 
         const preferredTitle = info.title?.userPreferred ?? 'Untitled';
         const coverImage = getSafeExternalUrl(info.coverImage?.extraLarge);
-        const img = coverImage ? <img src={coverImage} alt={preferredTitle} /> : null;
+        const img = coverImage ? <img className='detail-cover' src={coverImage} alt={preferredTitle} /> : null;
         const raiting = info.averageScore ? (<Tooltip title={info.averageScore / 10 / 2} arrow>
             <div className='detail-raiting'>
                 <Rating className='raiting-stars' value={info.averageScore / 10 / 2} precision={0.1} size='large' readOnly />
@@ -180,7 +180,9 @@ function Detail () {
                 ))}
             </span>
         </div> : null;
-        const title = <div className='detail-title' style={{ color: info.coverImage?.color }}>{preferredTitle}</div>;
+        const backLink = <Link className='detail-back' to={`/${date}`}><span aria-hidden='true'>←</span> Back to schedule</Link>;
+        const mediaKicker = <div className='detail-kicker'>{info.type === 'ANIME' ? 'Anime details' : 'Manga details'}</div>;
+        const title = <h1 className='detail-title'>{preferredTitle}</h1>;
         const sanitizedDescription = DOMPurify.sanitize(info.description ?? '');
         const description = <div className='detail-description' dangerouslySetInnerHTML={{__html: sanitizedDescription}}></div>;
         const status = info.status ? <div className='detail-category'>
@@ -233,6 +235,8 @@ function Detail () {
                 content([
                     img,
                     raiting,
+                    backLink,
+                    mediaKicker,
                     title, 
                     description,
                     alternativeTitles,
@@ -264,6 +268,8 @@ function Detail () {
                         links
                     ]),
                     right([
+                        backLink,
+                        mediaKicker,
                         title, 
                         description,
                         line(

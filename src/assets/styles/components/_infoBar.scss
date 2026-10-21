@@ -4,8 +4,12 @@
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    // background-color: $blue-2;
     width: 100%;
     height: $infobar-size;
-    // border-bottom: 2px solid rgba(0, 0, 0, 0.023);
+    padding: 0 clamp(1rem, 4vw, 4rem);
+    background: rgba(5, 12, 22, 0.64);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    backdrop-filter: blur(16px);
+    position: relative;
+    z-index: 10;
 }

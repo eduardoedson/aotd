@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import Calendar from './Calendar';
@@ -19,6 +19,10 @@ describe('Calendar', () => {
 
     expect(screen.getByRole('button', { name: 'Back one day' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Advance one day' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Tuesday, 20 Oct 2026/i })).toBeInTheDocument();
+    const dateButton = screen.getByRole('button', { name: /Tuesday, 20 Oct 2026/i });
+    expect(dateButton).toBeInTheDocument();
+
+    fireEvent.click(dateButton);
+    expect(document.querySelector('.react-datepicker__tab-loop')).not.toBeInTheDocument();
   });
 });

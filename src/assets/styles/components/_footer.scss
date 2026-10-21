@@ -5,29 +5,33 @@
     bottom: 0;
     width: 100%;
     height: $footer-size;
-    box-shadow: 0px -4px 4px 0px rgba(0, 0, 0, 0.075);
-    margin-top: 3rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.07);
+    background: rgba(3, 9, 16, 0.5);
+    margin-top: 2rem;
 }
 
 .footer-content {
     display: flex;
-    align-items: flex-end;
-    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex-direction: row;
     height: 100%;
-    padding: 0.3rem;
-    padding-right: 1.9rem;
-    font-size: 10px;
-    gap: 13px;
+    padding: 1rem clamp(1rem, 4vw, 4rem);
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.48);
+    gap: 1rem;
 }
 
 .footer-data-proveider {
-    font-size: 9px;
+    font-size: 11px;
     gap: 4px;
 }
 
 @media screen and (max-width: 767px) {
     .footer-content {
         align-items: center;
-        padding-right: 0;
+        flex-direction: column;
+        gap: 0.4rem;
+        text-align: center;
     }
 }

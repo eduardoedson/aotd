@@ -2,10 +2,12 @@
 
 .root-container {
     width: 100%;
+    min-height: 100vh;
     margin: 0;
     padding: 0;
+    overflow-x: hidden;
 }
 
 .root-children-container {
-    min-height: calc(100vh - $infobar-size - $navbar-size - $footer-size); /* you have to minus header and footer width together*/
+    min-height: calc(100vh - $infobar-size - $footer-size);
 }

@@ -14,10 +14,12 @@ const retryLink = new RetryLink({
 });
 
 export const anilist = new ApolloClient({
-  link: retryLink.concat(createHttpLink({ uri: 'https://graphql.anilist.co' })),
+  link: retryLink.concat(createHttpLink({
+    uri: 'https://graphql.anilist.co',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    }
+  })),
   cache: new InMemoryCache(),
-  headers: {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-  }
 });

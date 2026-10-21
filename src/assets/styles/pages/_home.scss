@@ -3,4 +3,50 @@
     flex-direction: column;
     justify-content: center;
     align-items: center;
+    width: min(100%, 1440px);
+    margin: 0 auto;
+    padding: 0 1.5rem 4rem;
+}
+
+.home-intro {
+    max-width: 680px;
+    margin: 0 auto 2rem;
+    text-align: center;
+
+    h1 {
+        margin: 0.45rem 0 0.65rem;
+        font-size: clamp(2rem, 4vw, 3.6rem);
+        line-height: 1.05;
+        letter-spacing: -0.045em;
+        color: #fff;
+    }
+
+    p {
+        color: rgba(255, 255, 255, 0.58);
+        font-size: clamp(0.95rem, 1.5vw, 1.08rem);
+        line-height: 1.6;
+    }
+}
+
+.home-intro-eyebrow {
+    display: inline-flex;
+    padding: 0.42rem 0.75rem;
+    border: 1px solid rgba(255, 61, 141, 0.22);
+    border-radius: 999px;
+    color: #ff83b7;
+    background: rgba(255, 61, 141, 0.07);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+@media screen and (max-width: 767px) {
+    .home-container {
+        padding: 0 1rem 2.5rem;
+    }
+
+    .home-intro {
+        margin-bottom: 1.5rem;
+    }
 }
