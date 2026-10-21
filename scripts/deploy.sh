@@ -458,8 +458,10 @@ info(f"Step 4/4: checking {SITE_URL}")
 wait_for(SITE_URL, "Site")
 vhost_ok = check_vhost()
 if not WEB_ONLY:
-    if not wait_for(f"{SITE_URL}/api/push/public-key", "Push API", expect_json=True):
+    info("  Waiting for the push API (up to 20 s)")
+    if not wait_for(f"{SITE_URL}/api/push/public-key", "Push API", expect_json=True, seconds=20):
         warn(f"  Check the vhost /api/push/ block and: pm2 logs {PM2_NAME}")
+        warn("  Check that COMMAND in scripts/.env recreates the push server (see scripts/.env.example)")
 if not vhost_ok:
     sys.exit(1)
 PYEOF
