@@ -318,6 +318,14 @@ html[data-theme='light'] {
     background: $surface;
   }
 
+  .title-search-header {
+    border-bottom-color: $line;
+  }
+
+  .title-search-empty {
+    background: $surface-tint;
+  }
+
   .title-search-link {
     color: $ink-strong;
   }

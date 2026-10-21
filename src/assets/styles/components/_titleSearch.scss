@@ -2,8 +2,8 @@
 
 .title-search {
   width: min(1180px, calc(100% - 2rem));
-  margin: 0 auto 1.75rem;
-  padding: 1rem;
+  margin: 1.5rem auto 0;
+  padding: 1.25rem 1.5rem 1.5rem;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.03);
@@ -15,7 +15,9 @@
   gap: 0.25rem 0.75rem;
   align-items: baseline;
   justify-content: space-between;
-  margin-bottom: 0.85rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
 
   h2 {
     overflow: hidden;
@@ -33,14 +35,25 @@
 }
 
 .title-search-empty {
-  margin: 0.25rem 0;
-  color: rgba(255, 255, 255, 0.6);
+  margin: 0;
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.035);
+  color: rgba(255, 255, 255, 0.65);
   font-size: 14px;
+  line-height: 1.5;
+}
+
+// The search results and the day below are two separate blocks, so the
+// schedule gets clear room after the results.
+.title-search + .day,
+.title-search + .week {
+  margin-top: 1rem;
 }
 
 .title-search-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 0.6rem;
   margin: 0;
   padding: 0;
@@ -155,7 +168,8 @@
 @media screen and (max-width: 520px) {
   .title-search {
     width: calc(100% - 1.5rem);
-    padding: 0.75rem;
+    margin-top: 1.25rem;
+    padding: 1rem;
   }
 
   .title-search-list {
