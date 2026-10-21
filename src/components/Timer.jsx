@@ -1,34 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import { useNow } from '../services/useNow';
+import { formatTime } from '../services/globals';
 
-function Timer({ timeLeft }) {
-  const [time, setTime] = useState(timeLeft);
+// Counts down to an absolute unix timestamp, so cached data never shows a stale timer.
+function Timer({ airingAt }) {
+  const now = useNow();
+  const secondsLeft = Math.max(0, Math.floor(airingAt - now / 1000));
 
-  useEffect(() => {
-      setTime(timeLeft);
-
-      const timer = setInterval(() => {
-        setTime(prev => {
-          if (prev <= 1) {
-            clearInterval(timer);
-            return 0;
-          }
-
-          return prev - 1;
-        });
-      }, 1000);
-
-      return () => { clearInterval(timer) };
-  }, [timeLeft]);
-
-  return <>{time <= 0 ? 'Released!' : formatTime(time)}</>;
-}
-
-export function formatTime(seconds) {
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const remainingSeconds = seconds % 60;
-
-  return `${hours.toString().padStart(2, '0')}h ${minutes.toString().padStart(2, '0')}m ${remainingSeconds.toString().padStart(2, '0')}s`;
+  return (
+    <time dateTime={new Date(airingAt * 1000).toISOString()}>
+      {secondsLeft <= 0 ? 'Released!' : formatTime(secondsLeft)}
+    </time>
+  );
 }
 
 export default Timer;

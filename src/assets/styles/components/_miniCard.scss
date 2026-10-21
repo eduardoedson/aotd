@@ -1,33 +1,38 @@
 @use '../settings/variables' as *;
 
 .miniCard-container {
-    display: flex;
-    flex-direction: column;
-    gap: 0.8rem;
-    justify-content: center;
-    align-items: center;
-    flex: 0 0 126px;
-    padding: 0.6rem;
-    border-radius: 14px;
-    border: 1px solid rgba(255, 255, 255, 0.09);
-    background: rgba(255, 255, 255, 0.04);
-    transition: transform 180ms ease, border-color 180ms ease;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  justify-content: center;
+  align-items: center;
+  flex: 0 0 126px;
+  padding: 0.6rem;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: rgba(255, 255, 255, 0.04);
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease;
 
-    &:hover { transform: translateY(-3px); border-color: rgba(255, 61, 141, 0.35); }
+  &:hover {
+    transform: translateY(-3px);
+    border-color: rgba(255, 61, 141, 0.35);
+  }
 }
 
 .miniCard-image {
-    max-height: 150px;
-    min-height: 150px;
-    max-width: 100px;
-    min-width: 100px;
-    object-fit: cover;
-    border-radius: 10px;
+  max-height: 150px;
+  min-height: 150px;
+  max-width: 100px;
+  min-width: 100px;
+  object-fit: cover;
+  border-radius: 10px;
 }
 
 .miniCard-text {
-    color: rgba(255, 255, 255, 0.82);
-    font-size: 12px;
-    line-height: 1.35;
-    text-align: center;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 12px;
+  line-height: 1.35;
+  text-align: center;
 }

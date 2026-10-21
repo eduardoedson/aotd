@@ -1,51 +1,94 @@
-import Card from './Card';
-import { useQuery, gql } from '@apollo/client';
-import LoadingDiv from './Loading';
+import { useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
+import CardHome from './CardHome';
+import Loading from './Loading';
 import Error from './Error';
+import { useDaySchedule } from '../services/schedule';
+import { useFavorites } from '../services/favorites';
+import { matchesFilters } from '../services/filters';
+import { useInfiniteScroll } from '../services/useInfiniteScroll';
+import { formatLongDate } from '../services/globals';
 
-const GET_DATA = gql`
-query ($start: Int, $end: Int) {    
-    Page(page: 1, perPage: 50) {      
-        airingSchedules(airingAt_greater: $start, airingAt_lesser: $end) {
-            episode
-            airingAt
-            timeUntilAiring
-            media {
-                id
-                description (asHtml: false)
-                title {
-                    userPreferred 
-                }
-                coverImage {    
-                    extraLarge    
-                    color  
-                }
-                externalLinks {
-                    site
-                    icon
-                    url
-                }
-            }      
-        }    
-    }  
-}`;
+const NO_FILTERS = { query: '', genre: '', favoritesOnly: false, active: false };
 
-function Day({ date }) {
-    const startOfDay = new Date(`${date}T00:00:00.000Z`);
-    const endOfDay = new Date(startOfDay);
-    endOfDay.setUTCDate(endOfDay.getUTCDate() + 1);
+function Day({ date, filters = NO_FILTERS }) {
+  const { search } = useLocation();
+  const { items, error, hasNextPage, loading, initialLoading, loadMore, retry } =
+    useDaySchedule(date);
+  const { isFavorite } = useFavorites();
 
-    // AniList uses strict greater/lesser filters, so the range is expanded by one second.
-    const startDate = Math.floor(startOfDay.getTime() / 1000) - 1;
-    const endDate = Math.floor(endOfDay.getTime() / 1000);
-    const { loading, error, data } = useQuery(GET_DATA, { variables: { start: startDate, end: endDate } });
+  const { query, genre, favoritesOnly } = filters;
+  const visibleItems = useMemo(
+    () => items.filter((item) => matchesFilters(item, { query, genre, favoritesOnly }, isFavorite)),
+    [items, query, genre, favoritesOnly, isFavorite],
+  );
 
-    if (error) return <Error msg={error.message} />;
+  const sentinelRef = useInfiniteScroll({
+    onLoadMore: loadMore,
+    enabled: hasNextPage && !loading && !error,
+    version: items.length,
+  });
 
-    const response = (data?.Page?.airingSchedules ?? []).filter(item => item?.media?.id);
-    return <div className="day-container">{loading ? <LoadingDiv /> : response.map(item => { return <Card key={`${item.media.id}-${item.episode}`} type='HOME' item={item} date={date} /> })}</div>;
+  if (initialLoading) return <Loading label='Loading schedule' />;
+
+  if (error && items.length === 0) {
+    return (
+      <Error msg={error.message}>
+        <button type='button' className='day-retry' onClick={retry}>
+          Try again
+        </button>
+      </Error>
+    );
+  }
+
+  const finished = !hasNextPage && !loading;
+  const countLabel = `${items.length}${hasNextPage ? '+' : ''} episode${items.length === 1 ? '' : 's'}`;
+  const summary = filters.active
+    ? `${visibleItems.length} of ${countLabel} match your filters`
+    : `${countLabel} airing on this day`;
+
+  return (
+    <section className='day' aria-label={`Episodes airing on ${formatLongDate(date)}`}>
+      <p className='day-summary' aria-live='polite'>
+        {summary}
+      </p>
+
+      {visibleItems.length > 0 ? (
+        <div className='day-container'>
+          {visibleItems.map((item) => (
+            <CardHome key={item.id} item={item} date={date} search={search} />
+          ))}
+        </div>
+      ) : null}
+
+      {finished && visibleItems.length === 0 ? (
+        <p className='day-empty'>
+          {filters.active
+            ? 'No episodes match your filters on this day.'
+            : 'No episodes are scheduled for this day.'}
+        </p>
+      ) : null}
+
+      {loading ? <Loading label='Loading more episodes' /> : null}
+
+      {error ? (
+        <div className='day-inline-error' role='alert'>
+          <span>Could not load more episodes.</span>
+          <button type='button' className='day-retry' onClick={retry}>
+            Try again
+          </button>
+        </div>
+      ) : null}
+
+      {hasNextPage && !loading && !error ? (
+        <div ref={sentinelRef} className='day-sentinel'>
+          <button type='button' className='day-load-more' onClick={loadMore}>
+            Load more episodes
+          </button>
+        </div>
+      ) : null}
+    </section>
+  );
 }
-  
-export default Day;
-  
 
+export default Day;

@@ -2,5 +2,8 @@
 .vscode
 node_modules
 dist
+coverage
 .env
 .history
+design/*.psd
+_to_delete

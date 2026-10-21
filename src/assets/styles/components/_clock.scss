@@ -1,12 +1,12 @@
 @use '../settings/variables' as *;
 
 .clock-container {
-    color: rgba(255, 255, 255, 0.68);
-    font-size: 12px;
-    font-weight: 500;
-    letter-spacing: 0.045em;
-    padding: 0.45rem 0.8rem;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.035);
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.045em;
+  padding: 0.45rem 0.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.035);
 }

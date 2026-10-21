@@ -1,297 +1,232 @@
-import React, { useEffect, useState } from 'react';
-import { useQuery, gql } from '@apollo/client';
-import { Link, useParams } from 'react-router-dom';
-import LoadingDiv from '../components/Loading';
+import { useMemo } from 'react';
+import { useQuery } from '@apollo/client';
+import { Link, useLocation, useParams } from 'react-router-dom';
+import DOMPurify from 'dompurify';
+import Loading from '../components/Loading';
 import Tag from '../components/Tag';
 import MiniCard from '../components/MiniCard';
+import StarRating from '../components/StarRating';
+import FavoriteButton from '../components/FavoriteButton';
+import AddToCalendarButton from '../components/AddToCalendarButton';
+import Timer from '../components/Timer';
+import UpcomingOnly from '../components/UpcomingOnly';
 import Error from './Error';
-import Rating from '@mui/material/Rating';
-import Tooltip from '@mui/material/Tooltip';
-import DOMPurify from 'dompurify';
-import { months, leftPad, capitalizeFirstLetter, getSafeExternalUrl, isValidDate } from '../services/globals';
+import {
+  DEFAULT_ACCENT,
+  formatFuzzyDate,
+  getSafeExternalUrl,
+  humanizeEnum,
+  isValidDate,
+} from '../services/globals';
+import { getHttpStatus } from '../services/backend';
+import { useDocumentTitle } from '../services/useDocumentTitle';
+import { DETAIL_QUERY } from '../services/detail';
 
-const GET_DATA = gql`
-query ($id: Int) {  
-    Page {
-      media (id: $id) {
-        title {
-            romaji
-            english
-            native
-            userPreferred
-        }
-        type
-        status
-        description
-        startDate {
-            year
-            month
-            day
-        }
-        endDate {
-            year
-            month
-            day
-        }
-        episodes
-        chapters
-        source
-        trailer {
-            id
-            site
-            thumbnail
-        }
-        coverImage {
-            extraLarge
-            color
-        }
-        genres
-        synonyms
-        averageScore
-        tags {
-            name
-        }
-        characters {
-          nodes {
-            name {
-                userPreferred
-            }
-            image {
-                medium
-            }
-          }
-        }
-        studios {
-            nodes {
-                name
-            }
-        }
-        externalLinks {
-            url
-            site
-        }
-      }
-    }
-}`;
+function Category({ title, inline = false, children }) {
+  return (
+    <div className='detail-category'>
+      <span className='detail-category-title'>{title}</span>
+      <span
+        className={inline ? 'detail-category-description-inline' : 'detail-category-description'}
+      >
+        {children}
+      </span>
+    </div>
+  );
+}
 
-const useMediaQuery = (query) => {
-    const [matches, setMatches] = useState(() => window.matchMedia(query).matches);
+function DetailView({ info, date, search }) {
+  const title = info.title?.userPreferred ?? 'Untitled';
+  const isAnime = info.type === 'ANIME';
+  const coverImage = getSafeExternalUrl(info.coverImage?.extraLarge);
+  const siteUrl = getSafeExternalUrl(info.siteUrl);
+  const description = useMemo(() => DOMPurify.sanitize(info.description ?? ''), [info.description]);
 
-    useEffect(() => {
-        const mediaQuery = window.matchMedia(query);
-        const updateMatch = (event) => setMatches(event.matches);
+  const alternativeTitles = ['romaji', 'english', 'native']
+    .map((key) => info.title?.[key])
+    .filter((value, index, list) => value && value !== title && list.indexOf(value) === index);
+  const safeLinks = (info.externalLinks ?? [])
+    .map((link) => ({ ...link, url: getSafeExternalUrl(link.url) }))
+    .filter((link) => link.url);
+  const trailerId =
+    info.trailer?.site === 'youtube' && /^[\w-]+$/.test(info.trailer.id ?? '')
+      ? info.trailer.id
+      : null;
+  const next = info.nextAiringEpisode;
+  const count = isAnime ? info.episodes : info.chapters;
 
-        setMatches(mediaQuery.matches);
-        mediaQuery.addEventListener('change', updateMatch);
-        return () => mediaQuery.removeEventListener('change', updateMatch);
-    }, [query]);
+  return (
+    <div
+      className='detail-content'
+      style={{ '--detail-accent': info.coverImage?.color || DEFAULT_ACCENT }}
+    >
+      {/* On wide screens the two columns flow independently; on small screens the
+          columns use display: contents and the blocks are reordered with CSS only. */}
+      <div className='detail-layout'>
+        <div className='detail-column detail-column-left'>
+          <div className='detail-block detail-block-cover'>
+            {coverImage ? <img className='detail-cover' src={coverImage} alt={title} /> : null}
+            {info.averageScore ? <StarRating score={info.averageScore} /> : null}
+            <FavoriteButton
+              className='detail-favorite'
+              id={info.id}
+              title={title}
+              image={coverImage}
+              showLabel
+            />
+          </div>
 
-    return matches;
-};
-
-function Detail () {
-    const { date, id } = useParams();
-    const numericId = Number(id);
-    const validId = Number.isInteger(numericId) && numericId > 0;
-    const validDate = isValidDate(date);
-    const { loading, error, data } = useQuery(GET_DATA, {
-        variables: { id: numericId },
-        skip: !validId || !validDate
-    });
-    const isMobile = useMediaQuery('(max-width: 1400px)');
-
-    if (!validDate) return <Error msg={'Invalid date. Use the YYYY-MM-DD format.'} />;
-
-    if (!validId) return <Error msg={'Invalid item ID!'} />;
-
-    if (loading) return <LoadingDiv />;
-
-    if (error) return <Error msg={error.message} />;
-
-    const response = data?.Page?.media;
-    if (response?.length !== 1) return <Error msg={'Item Not Found!'} />;
-    const info = response[0];
-
-    const formatDate = ({year, month, day} = {}) => {
-        if (!year || !month || !day) return '???'
-        return `${months[month - 1]} ${leftPad(day, 2)}, ${year}`;
-    }
-
-    const mountScreen = () => {
-        const withKeys = (children) => children
-            .filter(Boolean)
-            .map((child, index) => React.cloneElement(child, { key: child.key ?? index }));
-        const main = (children) => <div className='detail-content' style={{ '--detail-accent': info.coverImage?.color || '#ff3d8d' }}>{children}</div>;
-        
-        const content = (children) =>  <div className='detail-split-content'>{withKeys(children)}</div>;
-        const left = (children) =>  <div className='detail-split-content-left'>{withKeys(children)}</div>;
-        const right = (children) =>  <div className='detail-split-content-right'>{withKeys(children)}</div>;
-
-        const line = (children) => <div className='detail-category-line'>{withKeys(children)}</div>;
-
-        const preferredTitle = info.title?.userPreferred ?? 'Untitled';
-        const coverImage = getSafeExternalUrl(info.coverImage?.extraLarge);
-        const img = coverImage ? <img className='detail-cover' src={coverImage} alt={preferredTitle} /> : null;
-        const raiting = info.averageScore ? (<Tooltip title={info.averageScore / 10 / 2} arrow>
-            <div className='detail-raiting'>
-                <Rating className='raiting-stars' value={info.averageScore / 10 / 2} precision={0.1} size='large' readOnly />
-            </div>
-        </Tooltip>) : null;
-        const alternativeTitles = Object.keys(info.title ?? {}).length > 0 ? <div className='detail-category'>
-            <span className='detail-category-title'>Alternative Titles</span>
-            <span className='detail-category-description'>
-                {Object.keys(info.title ?? {}).map(key => key !== 'userPreferred' && key !== '__typename' && info.title[key] ? <span key={key}>{info.title[key]}</span> : null)}
-            </span>
-        </div> : null;
-        const synonyms = info.synonyms?.length > 0 ? <div className='detail-category'>
-            <span className='detail-category-title'>Synonyms</span>
-            <span className='detail-category-description'>
-                {info.synonyms.map(synonym => <span key={synonym}>{synonym}</span>)}
-            </span>
-        </div> : null;
-        const genres = info.genres?.length > 0 ? <div className='detail-category'>
-            <span className='detail-category-title'>Genres</span>
-            <span className='detail-category-description-inline'>
-                {info.genres.map(genre => <Tag key={genre} text={genre} />)}
-            </span>
-        </div> : null;
-        const tags = info.tags?.length > 0 ? <div className='detail-category'>
-            <span className='detail-category-title'>Tags</span>
-            <span className='detail-category-description-inline'>
-                {info.tags.map(tag => <Tag key={tag.name} text={tag.name} />)}
-            </span>
-        </div> : null;
-        const studios = info.studios?.nodes?.length > 0 ? <div className='detail-category'>
-            <span className='detail-category-title'>Studios</span>
-            <span className='detail-category-description'>
-                {info.studios.nodes.map(studio => <span key={studio.name}>{studio.name}</span>)}
-            </span>
-        </div> : null;
-        const safeLinks = (info.externalLinks ?? [])
-            .map(link => ({ ...link, url: getSafeExternalUrl(link.url) }))
-            .filter(link => link.url);
-        const links = safeLinks.length > 0 ? <div className='detail-category'>
-            <span className='detail-category-title'>Useful Links</span>
-            <span className='detail-category-description'>
-                {safeLinks.map(link => (
-                    <a key={`${link.site}-${link.url}`} href={link.url} target='_blank' rel='noopener noreferrer'>
-                        {link.site}
-                    </a>
+          <div className='detail-block detail-block-meta'>
+            {alternativeTitles.length > 0 ? (
+              <Category title='Alternative Titles'>
+                {alternativeTitles.map((value) => (
+                  <span key={value}>{value}</span>
                 ))}
-            </span>
-        </div> : null;
-        const backLink = <Link className='detail-back' to={`/${date}`}><span aria-hidden='true'>←</span> Back to schedule</Link>;
-        const mediaKicker = <div className='detail-kicker'>{info.type === 'ANIME' ? 'Anime details' : 'Manga details'}</div>;
-        const title = <h1 className='detail-title'>{preferredTitle}</h1>;
-        const sanitizedDescription = DOMPurify.sanitize(info.description ?? '');
-        const description = <div className='detail-description' dangerouslySetInnerHTML={{__html: sanitizedDescription}}></div>;
-        const status = info.status ? <div className='detail-category'>
-            <span className='detail-category-title'>Status</span>
-            <span className='detail-category-description'>{capitalizeFirstLetter(info.status).replace(/_/g, ' ')}</span>
-        </div> : null;
-        const source = info.source ? <div className='detail-category'>
-            <span className='detail-category-title'>Source</span>
-            <span className='detail-category-description'>{capitalizeFirstLetter(info.source).replace(/_/g, ' ')}</span>
-        </div> : null;
-        const qtde = <div className='detail-category'>
-            <span className='detail-category-title'>{info.type === 'ANIME' ? 'Episodes' : 'Chapters'}</span>
-            <span className='detail-category-description'>{
-                info.type === 'ANIME' ? 
-                    (info.episodes ? info.episodes : 'Unknown')
-                :
-                    (info.chapters ? info.chapters : 'Unknown')
-            }</span>
-        </div>;
-        const startDate = <div className='detail-category'>
-            <span className='detail-category-title'>Start Date</span>
-            <span className='detail-category-description'>{'startDate' in info ? formatDate(info.startDate) : '???'}</span>
-        </div>;
-        const endDate = <div className='detail-category'>
-            <span className='detail-category-title'>End Date</span>
-            <span className='detail-category-description'>{'endDate' in info ? formatDate(info.endDate) : '???'}</span>
+              </Category>
+            ) : null}
+            {info.synonyms?.length > 0 ? (
+              <Category title='Synonyms'>
+                {info.synonyms.map((synonym) => (
+                  <span key={synonym}>{synonym}</span>
+                ))}
+              </Category>
+            ) : null}
+            {info.genres?.length > 0 ? (
+              <Category title='Genres' inline>
+                {info.genres.map((genre) => (
+                  <Tag key={genre} text={genre} />
+                ))}
+              </Category>
+            ) : null}
+            {info.tags?.length > 0 ? (
+              <Category title='Tags' inline>
+                {info.tags.map((tag) => (
+                  <Tag key={tag.id} text={tag.name} />
+                ))}
+              </Category>
+            ) : null}
+            {info.studios?.nodes?.length > 0 ? (
+              <Category title='Studios'>
+                {info.studios.nodes.map((studio) => (
+                  <span key={studio.id}>{studio.name}</span>
+                ))}
+              </Category>
+            ) : null}
+            {safeLinks.length > 0 ? (
+              <Category title='Useful Links'>
+                {safeLinks.map((link) => (
+                  <a key={link.id} href={link.url} target='_blank' rel='noopener noreferrer'>
+                    {link.site}
+                  </a>
+                ))}
+              </Category>
+            ) : null}
+          </div>
         </div>
-        const trailerId = info.trailer?.site === 'youtube' && /^[\w-]+$/.test(info.trailer.id ?? '')
-            ? info.trailer.id
-            : null;
-        const trailer = trailerId ? <div className='detail-trailer'>
-            <iframe 
-                className='detail-trailer-iframe'
-                title={preferredTitle}
-                src={`https://www.youtube.com/embed/${trailerId}`}
-                frameBorder='0'
-                allowFullScreen
-            >
-            </iframe> 
-        </div> : null;
-        const characters = info.characters?.nodes?.length > 0 ? <div className='detail-characters'>
-            <span className='detail-category-title'>Characters</span>
-            <div className='detail-characters-list'>
-                {info.characters.nodes.map(char => <MiniCard key={char.name.userPreferred} image={char.image.medium} text={char.name.userPreferred} />)}
+
+        <div className='detail-column detail-column-right'>
+          <header className='detail-block detail-block-header'>
+            <Link className='detail-back' to={`/${date}${search}`}>
+              <span aria-hidden='true'>←</span> Back to schedule
+            </Link>
+            <div className='detail-kicker'>{isAnime ? 'Anime details' : 'Manga details'}</div>
+            <h1 className='detail-title'>{title}</h1>
+            <div className='detail-description' dangerouslySetInnerHTML={{ __html: description }} />
+          </header>
+
+          <div className='detail-block detail-block-facts'>
+            <div className='detail-category-line'>
+              {info.status ? <Category title='Status'>{humanizeEnum(info.status)}</Category> : null}
+              {info.source ? <Category title='Source'>{humanizeEnum(info.source)}</Category> : null}
+              <Category title={isAnime ? 'Episodes' : 'Chapters'}>{count || 'Unknown'}</Category>
+              <Category title='Start Date'>{formatFuzzyDate(info.startDate ?? undefined)}</Category>
+              <Category title='End Date'>{formatFuzzyDate(info.endDate ?? undefined)}</Category>
             </div>
-        </div> : null;
+          </div>
 
-        if (isMobile) {
-            return main(
-                content([
-                    img,
-                    raiting,
-                    backLink,
-                    mediaKicker,
-                    title, 
-                    description,
-                    alternativeTitles,
-                    synonyms, 
-                    genres,
-                    tags,
-                    studios,
-                    links,
-                    status, 
-                    source, 
-                    qtde, 
-                    startDate, 
-                    endDate,
-                    trailer,
-                    characters
-                ])
-            )
-        } else {
-            return main(
-                content([
-                    left([
-                        img,
-                        raiting,
-                        alternativeTitles,
-                        synonyms, 
-                        genres,
-                        tags,
-                        studios,
-                        links
-                    ]),
-                    right([
-                        backLink,
-                        mediaKicker,
-                        title, 
-                        description,
-                        line(
-                            [status, 
-                            source, 
-                            qtde, 
-                            startDate, 
-                            endDate
-                        ]),
-                        trailer,
-                        characters
-                    ])
-                ])
-            )
-        }
-    }
-
-    return (
-        <div className='detail-container'>
-            {loading ? <LoadingDiv /> : mountScreen()}
+          <div className='detail-block detail-block-media'>
+            {next ? (
+              <UpcomingOnly airingAt={next.airingAt}>
+                <div className='detail-next'>
+                  <div className='detail-next-info'>
+                    <span className='detail-category-title'>Next episode</span>
+                    <strong>
+                      Episode {next.episode} in <Timer airingAt={next.airingAt} />
+                    </strong>
+                  </div>
+                  <AddToCalendarButton
+                    className='detail-next-button'
+                    mediaId={info.id}
+                    title={title}
+                    episode={next.episode}
+                    airingAt={next.airingAt}
+                    duration={info.duration}
+                    url={siteUrl}
+                    showLabel
+                  />
+                </div>
+              </UpcomingOnly>
+            ) : null}
+            {trailerId ? (
+              <div className='detail-trailer'>
+                <iframe
+                  className='detail-trailer-iframe'
+                  title={`${title} trailer`}
+                  src={`https://www.youtube-nocookie.com/embed/${trailerId}`}
+                  loading='lazy'
+                  referrerPolicy='strict-origin-when-cross-origin'
+                  allow='accelerometer; encrypted-media; gyroscope; picture-in-picture; fullscreen'
+                />
+              </div>
+            ) : null}
+            {info.characters?.nodes?.length > 0 ? (
+              <div className='detail-characters'>
+                <span className='detail-category-title'>Characters</span>
+                <div className='detail-characters-list'>
+                  {info.characters.nodes.map((character) => (
+                    <MiniCard
+                      key={character.id}
+                      image={character.image?.medium}
+                      text={character.name?.userPreferred ?? 'Unknown'}
+                    />
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </div>
         </div>
-    )
+      </div>
+    </div>
+  );
+}
+
+function Detail() {
+  const { date, id } = useParams();
+  const { search } = useLocation();
+  const numericId = Number(id);
+  const validId = Number.isInteger(numericId) && numericId > 0;
+  const validDate = isValidDate(date);
+  const { loading, error, data } = useQuery(DETAIL_QUERY, {
+    variables: { id: numericId },
+    skip: !validId || !validDate,
+  });
+  const info = data?.Media;
+
+  useDocumentTitle(info?.title?.userPreferred ?? null);
+
+  if (!validDate) return <Error msg='Invalid date. Use the YYYY-MM-DD format.' />;
+  if (!validId) return <Error msg='Invalid item ID!' />;
+  if (loading) return <Loading />;
+  if (error) {
+    return <Error msg={getHttpStatus(error) === 404 ? 'Item Not Found!' : error.message} />;
+  }
+  if (!info) return <Error msg='Item Not Found!' />;
+
+  return (
+    <div className='detail-container'>
+      <DetailView info={info} date={date} search={search} />
+    </div>
+  );
 }
 
 export default Detail;

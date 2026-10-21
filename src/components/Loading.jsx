@@ -1,7 +1,11 @@
 import LoadingImg from '../assets/images/loading.svg';
 
-function Loading () {
-    return <div className='loading-container'><img src={LoadingImg} alt="Loading" /></div>;
+function Loading({ label = 'Loading' }) {
+  return (
+    <div className='loading-container' role='status'>
+      <img src={LoadingImg} alt={label} />
+    </div>
+  );
 }
 
 export default Loading;

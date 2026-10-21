@@ -1,0 +1,81 @@
+@use '../settings/variables' as *;
+
+.favorite-button,
+.calendar-add-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(4, 11, 21, 0.62);
+  backdrop-filter: blur(10px);
+  box-shadow: none;
+  color: rgba(255, 255, 255, 0.86);
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background-color 160ms ease,
+    color 160ms ease;
+
+  svg {
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+  }
+
+  span {
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  &:hover {
+    transform: translateY(-1px);
+    border-color: rgba($pink, 0.55);
+    color: #fff;
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba($pink, 0.7);
+    outline-offset: 2px;
+  }
+}
+
+.favorite-button svg {
+  fill: transparent;
+  stroke: currentColor;
+  stroke-width: 2;
+}
+
+.favorite-button.is-active {
+  border-color: rgba($pink, 0.7);
+  background: rgba($pink, 0.22);
+  color: $pink;
+
+  svg {
+    fill: $pink;
+    stroke: $pink;
+  }
+}
+
+.favorite-button:has(span),
+.calendar-add-button:has(span) {
+  width: auto;
+  padding: 0 1rem;
+}
+
+// Override the global button focus shadow, these controls use an outline instead.
+.favorite-button,
+.calendar-add-button,
+.filters-chip,
+.filters-clear,
+.day-load-more,
+.day-retry {
+  &:focus {
+    box-shadow: none;
+  }
+}

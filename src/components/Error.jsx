@@ -1,12 +1,13 @@
-import Image from '../assets/images/error.png';
+import Image from '../assets/images/error.webp';
 
-function Error ({msg}) {
-    return (
-        <div className='errorCmp-container'>
-            <img src={Image} alt='Something went wrong' />
-            <span className='erroCmp-msg'>{msg || 'Oops, something went wrong...'}</span>
-        </div>
-    )
+function Error({ msg, children }) {
+  return (
+    <div className='errorCmp-container' role='alert'>
+      <img src={Image} alt='' />
+      <span className='errorCmp-msg'>{msg || 'Oops, something went wrong...'}</span>
+      {children ? <div className='errorCmp-actions'>{children}</div> : null}
+    </div>
+  );
 }
 
-export default  Error;
+export default Error;

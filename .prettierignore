@@ -1,0 +1,9 @@
+dist
+coverage
+node_modules
+.history
+design
+package-lock.json
+public/*.png
+public/icons
+_to_delete

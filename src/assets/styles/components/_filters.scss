@@ -1,0 +1,137 @@
+@use '../settings/variables' as *;
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  width: min(100%, 880px);
+  margin-top: 1.25rem;
+}
+
+.filters-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.filters-field-search {
+  flex: 1 1 240px;
+  max-width: 340px;
+}
+
+.filters-search-icon {
+  position: absolute;
+  left: 0.85rem;
+  width: 17px;
+  height: 17px;
+  fill: rgba(255, 255, 255, 0.45);
+  pointer-events: none;
+}
+
+.filters-input,
+.filters-select {
+  width: 100%;
+  max-width: none;
+  height: 42px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  color: #fff;
+  font-size: 14px;
+  box-shadow: none;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease;
+
+  &:focus-visible {
+    border-color: rgba($pink, 0.6);
+    outline: 2px solid rgba($pink, 0.35);
+    outline-offset: 1px;
+  }
+}
+
+.filters-input {
+  padding: 0 0.9rem 0 2.5rem;
+  background: rgba(255, 255, 255, 0.05);
+
+  &::placeholder {
+    color: rgba(255, 255, 255, 0.42);
+  }
+  &::-webkit-search-cancel-button {
+    filter: invert(1);
+    opacity: 0.6;
+  }
+}
+
+.filters-select {
+  min-width: 170px;
+  padding: 0 2.6rem 0 0.9rem;
+  background:
+    $select-arrow-icon no-repeat right 0.75em center / 1.1em,
+    rgba(255, 255, 255, 0.05);
+}
+
+.filters-chip,
+.filters-clear {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  height: 42px;
+  padding: 0 0.95rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: none;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 13px;
+  font-weight: 650;
+
+  svg {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+  }
+
+  &:hover {
+    border-color: rgba($pink, 0.45);
+    color: #fff;
+  }
+  &:focus-visible {
+    outline: 2px solid rgba($pink, 0.6);
+    outline-offset: 2px;
+  }
+}
+
+.filters-chip.is-active {
+  border-color: rgba($pink, 0.6);
+  background: rgba($pink, 0.16);
+  color: #fff;
+
+  svg {
+    fill: $pink;
+  }
+}
+
+.filters-clear {
+  border-color: transparent;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.6);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.filters-hint {
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 12px;
+}
+
+@media screen and (max-width: 767px) {
+  .filters-field-search {
+    max-width: none;
+    flex-basis: 100%;
+  }
+  .filters-field:not(.filters-field-search) {
+    flex: 1 1 auto;
+  }
+}

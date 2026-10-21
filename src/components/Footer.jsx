@@ -1,15 +1,23 @@
-import { Link } from 'react-router-dom';
-import { getToday } from '../services/globals';
+import { useState } from 'react';
 
-function Footer () {
-    return (
-        <footer className='footer-container'>
-            <div className='footer-content'>
-                <span className='footer-rights'>© {getToday().split('-')[0]}「AOTD :: Anime of The Day」・ All Rights Reserved</span>
-                <span className='footer-data-proveider'>Data provided by <Link to={'https://anilist.co/'} target='_blank'>anilist</Link></span>
-            </div>
-        </footer>
-    );
+function Footer() {
+  const [year] = useState(() => new Date().getUTCFullYear());
+
+  return (
+    <footer className='footer-container'>
+      <div className='footer-content'>
+        <span className='footer-rights'>
+          © {year}「AOTD :: Anime of The Day」・ All Rights Reserved
+        </span>
+        <span className='footer-data-provider'>
+          Data provided by{' '}
+          <a href='https://anilist.co/' target='_blank' rel='noopener noreferrer'>
+            AniList
+          </a>
+        </span>
+      </div>
+    </footer>
+  );
 }
 
 export default Footer;

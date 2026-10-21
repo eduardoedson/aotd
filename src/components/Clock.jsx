@@ -1,29 +1,23 @@
-import React, { useState, useEffect } from 'react';
 import { weekDays, months } from '../services/globals';
+import { useNow } from '../services/useNow';
+
+const pad = (value) => value.toString().padStart(2, '0');
+
+const formatClock = (date) => {
+  const weekDay = weekDays[date.getUTCDay()];
+  const month = months[date.getUTCMonth()];
+  return `${weekDay}, ${month} ${pad(date.getUTCDate())}, ${pad(date.getUTCHours())}:${pad(
+    date.getUTCMinutes(),
+  )}:${pad(date.getUTCSeconds())} UTC`;
+};
 
 function Clock() {
-  const [now, setNow] = useState(new Date());
-
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-        setNow(new Date());
-    }, 1000);
-
-    return () => clearInterval(intervalId);
-  }, []);
-
-  const formatClock = (date) => {
-    const weekDay = weekDays[date.getUTCDay()];
-    const day = date.getUTCDate().toString().padStart(2, '0');
-    const month = months[date.getUTCMonth()];
-    const hours = date.getUTCHours().toString().padStart(2, '0');
-    const minutes = date.getUTCMinutes().toString().padStart(2, '0');
-    const seconds = date.getUTCSeconds().toString().padStart(2, '0');
-
-    return `${weekDay}, ${month} ${day}, ${hours}:${minutes}:${seconds} - UTC`;
-  };
-
-  return (<div className='clock-container'>{formatClock(now)}</div>);
+  const now = useNow();
+  return (
+    <div className='clock-container' aria-live='off'>
+      {formatClock(new Date(now))}
+    </div>
+  );
 }
 
 export default Clock;
