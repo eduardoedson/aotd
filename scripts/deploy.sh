@@ -172,6 +172,8 @@ DEFAULT_COMMAND = (
     "pm2 save"
 )
 COMMAND = env.get("COMMAND") or DEFAULT_COMMAND
+# Node major version used to build on the server (Vite 8 needs 20.19 or newer)
+NODE_VERSION = env.get("NODE_VERSION") or "22"
 
 LOCAL_ROOT = os.environ["DEPLOY_ROOT_DIR"]
 FULL_UPLOAD = os.environ.get("DEPLOY_FULL_UPLOAD") == "true"
@@ -341,6 +343,25 @@ def run_step(command, failure):
 
 root = shlex.quote(REMOTE_ROOT)
 
+# Loads a recent Node.js before each remote step. The system node on the server
+# can be older than the build tools need (Ubuntu ships Node 18), so this uses nvm:
+# it installs nvm and NODE_VERSION once when they are missing, then reuses them.
+node_version = shlex.quote(NODE_VERSION)
+node_setup = (
+    'export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"; '
+    'if [ ! -s "$NVM_DIR/nvm.sh" ]; then '
+    "echo 'nvm not found, installing it (one time)'; "
+    "curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | PROFILE=/dev/null bash >/dev/null || exit 3; "
+    "fi; "
+    '. "$NVM_DIR/nvm.sh" || exit 3; '
+    f"if ! nvm use --silent {node_version} >/dev/null 2>&1; then "
+    f"echo 'Installing Node.js {NODE_VERSION} with nvm (one time)'; "
+    f"nvm install {node_version} >/dev/null && nvm use --silent {node_version} >/dev/null || exit 3; "
+    "fi; "
+    "node -e \"const [a,b]=process.versions.node.split('.').map(Number);process.exit(a>20||(a===20&&b>=19)?0:1)\" "
+    "|| { echo \"Node $(node -v) is too old: set NODE_VERSION in scripts/.env to 22 or newer\"; exit 3; }; "
+)
+
 # ── Step 2: build on the server ────────────────────────────────────────────
 # The build goes to .dist-next and only replaces dist/ when it succeeded, so a
 # failed build leaves the live site untouched.
@@ -349,6 +370,8 @@ keep_assets = "" if CLEAN_ASSETS else (
     "if [ -d dist/assets ]; then mkdir -p .dist-next/assets && (cp -rn dist/assets/. .dist-next/assets/ 2>/dev/null || true); fi && "
 )
 build_command = (
+    f"{node_setup}"
+    "echo \"Using Node $(node -v)\" && "
     f"cd {root} && "
     "npm install --no-audit --no-fund && "
     "rm -rf .dist-next && "
@@ -367,7 +390,7 @@ if WEB_ONLY:
     warn("Step 3/4: COMMAND skipped (--web-only)")
 else:
     info(f"Step 3/4: running COMMAND ({'push server restart' if COMMAND == DEFAULT_COMMAND else COMMAND})")
-    run_step(f"cd {root} && {COMMAND}", "COMMAND failed, the site itself is already live")
+    run_step(f"{node_setup}cd {root} && {COMMAND}", "COMMAND failed, the site itself is already live")
     success("  COMMAND finished")
 
 try:
