@@ -159,16 +159,16 @@ USER = env["WEB_USER"]
 PASSWORD = env.get("WEB_PASSWORD") or None
 KEY_PATH = os.path.expanduser(env["WEB_KEY_PATH"]) if env.get("WEB_KEY_PATH") else None
 REMOTE_ROOT = env["WEB_PATH"].rstrip("/") or "/"
-PM2_NAME = env.get("PM2_NAME") or "aotd-push"
+PM2_NAME = env.get("PM2_NAME") or "aotd"
 SITE_URL = (env.get("SITE_URL") or "https://aotd.eduardoalves.tech").rstrip("/")
 # Runs after the build, from the project root on the server
 DEFAULT_COMMAND = (
     "cd server && "
     "if [ ! -f .env ]; then echo 'server/.env is missing: create it from .env.example first'; exit 2; fi && "
     "npm install --omit=dev --no-audit --no-fund && "
-    f"(pm2 describe {PM2_NAME} >/dev/null 2>&1 "
-    "&& pm2 reload ecosystem.config.cjs --update-env "
-    "|| pm2 start ecosystem.config.cjs) && "
+    # delete + start (not reload) so pm2 also picks up a new Node interpreter
+    f"(pm2 delete {PM2_NAME} >/dev/null 2>&1 || true) && "
+    "pm2 start ecosystem.config.cjs && "
     "pm2 save"
 )
 COMMAND = env.get("COMMAND") or DEFAULT_COMMAND
@@ -420,11 +420,48 @@ def wait_for(url, label, expect_json=False, seconds=60):
     warn(f"  {label} did not answer within {seconds} s ({last_error})")
     return False
 
+def fetch_text(url):
+    try:
+        request = urllib.request.Request(url, headers={"User-Agent": "aotd-deploy", "Cache-Control": "no-cache"})
+        with urllib.request.urlopen(request, timeout=10) as response:
+            return response.status, response.read(200_000).decode("utf-8", "replace")
+    except urllib.error.HTTPError as exc:
+        return exc.code, ""
+    except Exception:
+        return None, ""
+
+# The vhost must serve dist/ only. When its root is the project folder, the
+# site breaks (the browser gets src/index.jsx) and private files become public.
+def check_vhost():
+    _, home = fetch_text(SITE_URL + "/")
+    problems = []
+    if "/src/index.jsx" in home:
+        problems.append("the home page is the source index.html, not the build")
+    for path in ("/scripts/.env", "/package.json", "/.git/config", "/server/src/index.js"):
+        status, body = fetch_text(SITE_URL + path)
+        # A 200 with the app's own index.html is just the SPA fallback, which is fine.
+        if status == 200 and body and body != home:
+            problems.append(f"{path} is publicly downloadable")
+    if not problems:
+        success("  Vhost serves dist/ only")
+        return True
+    for problem in problems:
+        print(f"{RED}  ✗ {problem}{NC}", flush=True)
+    print(
+        f"{RED}  The vhost root must be {REMOTE_ROOT}/dist (see deploy/nginx-aotd.conf). "
+        f"If scripts/.env was exposed, change the server password now.{NC}",
+        flush=True,
+    )
+    return False
+
 info(f"Step 4/4: checking {SITE_URL}")
 wait_for(SITE_URL, "Site")
+vhost_ok = check_vhost()
 if not WEB_ONLY:
     if not wait_for(f"{SITE_URL}/api/push/public-key", "Push API", expect_json=True):
         warn(f"  Check the vhost /api/push/ block and: pm2 logs {PM2_NAME}")
+if not vhost_ok:
+    sys.exit(1)
 PYEOF
 
 ELAPSED=$(( $(date +%s) - START_TIME ))
