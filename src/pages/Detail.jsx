@@ -465,8 +465,13 @@ function Detail() {
   if (error) {
     return (
       <Error
-        msg={getErrorStatus(error) === 404 ? 'Item Not Found!' : describeAnilistError(error)}
-      />
+        title={getErrorStatus(error) === 404 ? 'Item Not Found!' : "Couldn't load this anime"}
+        msg={getErrorStatus(error) === 404 ? null : describeAnilistError(error)}
+      >
+        <Link className='day-retry errorCmp-link' to={`/${date}${search}`}>
+          Back to schedule
+        </Link>
+      </Error>
     );
   }
   if (!info) return <Error msg='Item Not Found!' />;

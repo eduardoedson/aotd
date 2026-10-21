@@ -88,7 +88,7 @@ function WeekView({ date, timeZone = 'utc', filters = NO_FILTERS }) {
 
   if (error && items.length === 0) {
     return (
-      <Error msg={describeAnilistError(error)}>
+      <Error title="Couldn't load this week" msg={describeAnilistError(error)}>
         <button type='button' className='day-retry' onClick={retry}>
           Try again
         </button>
