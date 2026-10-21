@@ -4,6 +4,7 @@ import CardHome from './CardHome';
 import SkeletonCard from './SkeletonCard';
 import Loading from './Loading';
 import Error from './Error';
+import { describeAnilistError } from '../services/anilist';
 import NextEpisodeJump from './NextEpisodeJump';
 import { useDaySchedule } from '../services/schedule';
 import { useFavorites } from '../services/favorites';
@@ -83,7 +84,7 @@ function Day({ date, timeZone = 'utc', filters = NO_FILTERS }) {
 
   if (error && items.length === 0) {
     return (
-      <Error msg={error.message}>
+      <Error msg={describeAnilistError(error)}>
         <button type='button' className='day-retry' onClick={retry}>
           Try again
         </button>
@@ -133,7 +134,7 @@ function Day({ date, timeZone = 'utc', filters = NO_FILTERS }) {
 
       {error ? (
         <div className='day-inline-error' role='alert'>
-          <span>Could not load more episodes.</span>
+          <span>Could not load more episodes. {describeAnilistError(error)}</span>
           <button type='button' className='day-retry' onClick={retry}>
             Try again
           </button>

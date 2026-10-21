@@ -121,3 +121,31 @@ export async function anilistRequest<T>(
 }
 
 export const getErrorStatus = (error: unknown) => (error as ErrorLike | null)?.status;
+
+const isOffline = () => typeof navigator !== 'undefined' && navigator.onLine === false;
+
+// Turns a request error into a message people can act on. When AniList blocks or
+// disables its API, the response has no CORS headers, so the browser only reports
+// a generic network failure ("Failed to fetch") without any status.
+export function describeAnilistError(error: unknown): string {
+  if (isOffline()) return 'You appear to be offline. Check your connection and try again.';
+
+  const { status, name } = (error ?? {}) as ErrorLike;
+  const message = (error as Error | null)?.message ?? '';
+
+  if (/temporarily disabled/i.test(message)) {
+    return 'AniList has temporarily disabled its API. Please try again later.';
+  }
+  if (
+    status === undefined &&
+    (name === 'TypeError' || /fetch|network|load failed/i.test(message))
+  ) {
+    return 'AniList is unavailable right now. Their service may be down, please try again in a few minutes.';
+  }
+  if (status === 429) return 'Too many requests to AniList. Please wait a minute and try again.';
+  if (status === 403) return 'AniList is refusing requests right now. Please try again later.';
+  if (status !== undefined && status >= 500) {
+    return 'AniList is having problems right now. Please try again in a few minutes.';
+  }
+  return message || 'Oops, something went wrong...';
+}

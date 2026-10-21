@@ -22,7 +22,7 @@ import {
   isValidDate,
   toIsoDateInZone,
 } from '../services/globals';
-import { getErrorStatus } from '../services/anilist';
+import { describeAnilistError, getErrorStatus } from '../services/anilist';
 import { useAnilistQuery } from '../services/useAnilistQuery';
 import { DETAIL_QUERY, EPISODE_QUERY } from '../services/queries';
 import { accentFor, textOn } from '../services/color';
@@ -463,7 +463,11 @@ function Detail() {
   if (!validId) return <Error msg='Invalid item ID!' />;
   if (loading) return <DetailSkeleton />;
   if (error) {
-    return <Error msg={getErrorStatus(error) === 404 ? 'Item Not Found!' : error.message} />;
+    return (
+      <Error
+        msg={getErrorStatus(error) === 404 ? 'Item Not Found!' : describeAnilistError(error)}
+      />
+    );
   }
   if (!info) return <Error msg='Item Not Found!' />;
 

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import FavoriteButton from './FavoriteButton';
 import Error from './Error';
+import { describeAnilistError } from '../services/anilist';
 import { useSchedule } from '../services/schedule';
 import { useFavorites } from '../services/favorites';
 import { byAiringTime, matchesFilters } from '../services/filters';
@@ -87,7 +88,7 @@ function WeekView({ date, timeZone = 'utc', filters = NO_FILTERS }) {
 
   if (error && items.length === 0) {
     return (
-      <Error msg={error.message}>
+      <Error msg={describeAnilistError(error)}>
         <button type='button' className='day-retry' onClick={retry}>
           Try again
         </button>
@@ -177,7 +178,7 @@ function WeekView({ date, timeZone = 'utc', filters = NO_FILTERS }) {
       </div>
       {error ? (
         <div className='day-inline-error' role='alert'>
-          <span>Part of the week could not be loaded.</span>
+          <span>Part of the week could not be loaded. {describeAnilistError(error)}</span>
           <button type='button' className='day-retry' onClick={retry}>
             Try again
           </button>

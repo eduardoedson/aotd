@@ -10,6 +10,7 @@ import {
   toIsoDateInZone,
 } from '../services/globals';
 import { accentFor } from '../services/color';
+import { describeAnilistError } from '../services/anilist';
 import { useTheme } from '../services/preferences';
 import { prefetchIntent } from '../services/prefetch';
 
@@ -35,7 +36,7 @@ function TitleSearchResults({ query, date, timeZone }) {
       </header>
 
       {error ? (
-        <p className='title-search-empty'>The search failed. Try again in a moment.</p>
+        <p className='title-search-empty'>The search failed. {describeAnilistError(error)}</p>
       ) : null}
       {!error && !loading && !pending && results.length === 0 ? (
         <p className='title-search-empty'>No anime found with that title.</p>

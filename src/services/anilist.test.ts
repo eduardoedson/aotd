@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   AnilistError,
   anilistRequest,
+  describeAnilistError,
   getRetryDelay,
   isRetryableError,
   parseRetryAfter,
@@ -82,5 +83,32 @@ describe('anilistRequest', () => {
     await vi.advanceTimersByTimeAsync(1);
     await expect(promise).resolves.toEqual({ ok: true });
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('describeAnilistError', () => {
+  it('explains a blocked or unreachable API instead of "Failed to fetch"', () => {
+    expect(describeAnilistError(new TypeError('Failed to fetch'))).toMatch(
+      /AniList is unavailable/,
+    );
+  });
+
+  it('recognises the disabled API message', () => {
+    const error = new AnilistError(
+      'The AniList API has been temporarily disabled due to severe stability issues.',
+      403,
+    );
+    expect(describeAnilistError(error)).toBe(
+      'AniList has temporarily disabled its API. Please try again later.',
+    );
+  });
+
+  it('maps rate limits and server errors', () => {
+    expect(describeAnilistError(new AnilistError('x', 429))).toMatch(/Too many requests/);
+    expect(describeAnilistError(new AnilistError('x', 503))).toMatch(/having problems/);
+  });
+
+  it('keeps other messages as they are', () => {
+    expect(describeAnilistError(new AnilistError('Not Found.', 404))).toBe('Not Found.');
   });
 });
