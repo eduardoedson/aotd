@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import Day from './Day';
 import WeekView from './WeekView';
@@ -23,6 +23,95 @@ const isTypingTarget = (target) =>
   target instanceof HTMLElement &&
   (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName));
 
+const MONTH_LABELS = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
+const WEEKDAY_LABELS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
+
+const monthKeyFor = (isoDate) => isoDate.slice(0, 7);
+
+function DatePicker({ value, today, onSelect, onClose }) {
+  const [monthKey, setMonthKey] = useState(() => monthKeyFor(value));
+  const panelRef = useRef(null);
+  const [year, month] = monthKey.split('-').map(Number);
+  const monthStart = `${monthKey}-01`;
+  const firstWeekday = new Date(`${monthStart}T00:00:00Z`).getUTCDay();
+  const leadingDays = firstWeekday === 0 ? 6 : firstWeekday - 1;
+  const days = useMemo(
+    () => Array.from({ length: 42 }, (_, index) => shiftIsoDate(monthStart, index - leadingDays)),
+    [monthStart, leadingDays],
+  );
+
+  useEffect(() => {
+    const onPointerDown = (event) => {
+      if (!panelRef.current?.contains(event.target)) onClose();
+    };
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') onClose();
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [onClose]);
+
+  const moveMonth = (amount) => {
+    const next = new Date(Date.UTC(year, month - 1 + amount, 1));
+    setMonthKey(`${next.getUTCFullYear()}-${String(next.getUTCMonth() + 1).padStart(2, '0')}`);
+  };
+
+  return (
+    <div ref={panelRef} className='calendar-picker' role='dialog' aria-label='Choose date'>
+      <div className='calendar-picker-header'>
+        <button type='button' onClick={() => moveMonth(-1)} aria-label='Previous month'>
+          <span aria-hidden='true'>←</span>
+        </button>
+        <strong>{MONTH_LABELS[month - 1]} {year}</strong>
+        <button type='button' onClick={() => moveMonth(1)} aria-label='Next month'>
+          <span aria-hidden='true'>→</span>
+        </button>
+      </div>
+      <div className='calendar-picker-weekdays' aria-hidden='true'>
+        {WEEKDAY_LABELS.map((label) => <span key={label}>{label}</span>)}
+      </div>
+      <div className='calendar-picker-grid'>
+        {days.map((day) => {
+          const inMonth = day.startsWith(monthKey);
+          return (
+            <button
+              key={day}
+              type='button'
+              className={`${inMonth ? '' : 'is-outside'}${day === today ? ' is-today' : ''}${day === value ? ' is-selected' : ''}`}
+              aria-label={formatLongDate(day)}
+              aria-pressed={day === value}
+              onClick={() => onSelect(day)}
+            >
+              {Number(day.slice(-2))}
+            </button>
+          );
+        })}
+      </div>
+      <div className='calendar-picker-footer'>
+        <button type='button' onClick={() => onSelect(today)}>Today</button>
+        <span>Use ← → to browse the schedule</span>
+      </div>
+    </div>
+  );
+}
+
 // Everything is derived from the URL, so there is no duplicated state to keep in sync.
 function Calendar() {
   const navigate = useNavigate();
@@ -31,6 +120,7 @@ function Calendar() {
   const filters = useScheduleFilters();
   const timeZone = useTimeZone();
   const inputRef = useRef(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const valid = isValidDate(date);
   const isWeek = filters.view === 'week';
   const step = isWeek ? 7 : 1;
@@ -62,15 +152,7 @@ function Calendar() {
 
   const goTo = (isoDate) => navigate(`/${isoDate}${search}`);
 
-  const openPicker = () => {
-    const input = inputRef.current;
-    if (!input) return;
-    try {
-      input.showPicker();
-    } catch {
-      input.focus();
-    }
-  };
+  const closePicker = () => setPickerOpen(false);
 
   const dateLabel = isWeek ? formatWeekRange(date) : formatLongDate(date);
   const isCurrent = isWeek ? getWeekStart(date) === getWeekStart(today) : date === today;
@@ -110,10 +192,19 @@ function Calendar() {
           <button
             type='button'
             className='calendar-controller-selected'
-            onClick={openPicker}
+            onClick={() => setPickerOpen((open) => !open)}
             aria-label={`Choose a date, currently ${dateLabel}`}
+            aria-expanded={pickerOpen}
+            aria-haspopup='dialog'
           >
-            {dateLabel}
+            <span className='calendar-date-icon' aria-hidden='true'>
+              <span>{date.slice(-2)}</span>
+            </span>
+            <span className='calendar-date-copy'>
+              <small>{isWeek ? 'Selected week' : isCurrent ? 'Today' : 'Selected date'}</small>
+              <strong>{dateLabel}</strong>
+            </span>
+            <span className={`calendar-date-chevron${pickerOpen ? ' is-open' : ''}`} aria-hidden='true'>⌄</span>
           </button>
           <input
             ref={inputRef}
@@ -124,6 +215,17 @@ function Calendar() {
             value={date}
             onChange={(event) => isValidDate(event.target.value) && goTo(event.target.value)}
           />
+          {pickerOpen ? (
+            <DatePicker
+              value={date}
+              today={today}
+              onClose={closePicker}
+              onSelect={(selected) => {
+                closePicker();
+                goTo(selected);
+              }}
+            />
+          ) : null}
         </div>
         <button
           type='button'

@@ -50,6 +50,18 @@ describe('Calendar', () => {
     expect(screen.getByTestId('location')).toHaveTextContent('/2026-12-25');
   });
 
+  it('opens the styled date picker and selects a day', () => {
+    renderCalendar();
+
+    fireEvent.click(screen.getByRole('button', { name: /Choose a date/ }));
+    expect(screen.getByRole('dialog', { name: 'Choose date' })).toBeInTheDocument();
+    expect(screen.getByText('October 2026')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Friday, 23 Oct 2026' }));
+    expect(screen.getByTestId('location')).toHaveTextContent('/2026-10-23');
+    expect(screen.queryByRole('dialog', { name: 'Choose date' })).not.toBeInTheDocument();
+  });
+
   it('moves between days and keeps the active filters', () => {
     renderCalendar('/2026-10-20?genre=Action');
 
