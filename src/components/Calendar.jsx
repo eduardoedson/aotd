@@ -79,13 +79,17 @@ function DatePicker({ value, today, onSelect, onClose }) {
         <button type='button' onClick={() => moveMonth(-1)} aria-label='Previous month'>
           <span aria-hidden='true'>←</span>
         </button>
-        <strong>{MONTH_LABELS[month - 1]} {year}</strong>
+        <strong>
+          {MONTH_LABELS[month - 1]} {year}
+        </strong>
         <button type='button' onClick={() => moveMonth(1)} aria-label='Next month'>
           <span aria-hidden='true'>→</span>
         </button>
       </div>
       <div className='calendar-picker-weekdays' aria-hidden='true'>
-        {WEEKDAY_LABELS.map((label) => <span key={label}>{label}</span>)}
+        {WEEKDAY_LABELS.map((label) => (
+          <span key={label}>{label}</span>
+        ))}
       </div>
       <div className='calendar-picker-grid'>
         {days.map((day) => {
@@ -105,7 +109,9 @@ function DatePicker({ value, today, onSelect, onClose }) {
         })}
       </div>
       <div className='calendar-picker-footer'>
-        <button type='button' onClick={() => onSelect(today)}>Today</button>
+        <button type='button' onClick={() => onSelect(today)}>
+          Today
+        </button>
         <span>Use ← → to browse the schedule</span>
       </div>
     </div>
@@ -204,7 +210,12 @@ function Calendar() {
               <small>{isWeek ? 'Selected week' : isCurrent ? 'Today' : 'Selected date'}</small>
               <strong>{dateLabel}</strong>
             </span>
-            <span className={`calendar-date-chevron${pickerOpen ? ' is-open' : ''}`} aria-hidden='true'>⌄</span>
+            <span
+              className={`calendar-date-chevron${pickerOpen ? ' is-open' : ''}`}
+              aria-hidden='true'
+            >
+              ⌄
+            </span>
           </button>
           <input
             ref={inputRef}

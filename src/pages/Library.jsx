@@ -17,8 +17,8 @@ import {
 } from '../services/globals';
 import { useTimeZone } from '../services/timezone';
 import { useDocumentTitle } from '../services/useDocumentTitle';
-import { useAnilistQuery } from '../services/useAnilistQuery';
-import { FAVORITE_EPISODES_QUERY } from '../services/queries';
+import { useFavoriteEpisodes } from '../services/favoriteEpisodes';
+import StaleNotice from '../components/StaleNotice';
 import { useNow } from '../services/useNow';
 
 const WEEK_SECONDS = 7 * 24 * 60 * 60;
@@ -68,21 +68,12 @@ function Library() {
   const [sort, setSort] = useState('added');
 
   const favoriteList = useMemo(() => Object.values(favorites), [favorites]);
-  const ids = useMemo(
-    () => favoriteList.map((item) => Number(item.id)).slice(0, 50),
-    [favoriteList],
-  );
-  const variables = useMemo(() => ({ ids, perPage: 50 }), [ids]);
-  const { data, loading } = useAnilistQuery(FAVORITE_EPISODES_QUERY, variables, {
-    skip: ids.length === 0,
-  });
+  const ids = useMemo(() => favoriteList.map((item) => Number(item.id)), [favoriteList]);
+  const { media, loading, staleSince } = useFavoriteEpisodes(ids);
 
   const nextById = useMemo(
-    () =>
-      Object.fromEntries(
-        (data?.Page?.media ?? []).map((media) => [media.id, media.nextAiringEpisode]),
-      ),
-    [data],
+    () => Object.fromEntries(media.map((item) => [item.id, item.nextAiringEpisode])),
+    [media],
   );
   const airingThisWeek = useAiringThisWeek(nextById);
 
@@ -124,6 +115,7 @@ function Library() {
           <Stat value={loading ? '…' : airingThisWeek} label='Airing this week' />
           <Stat value={history.length} label='Recently viewed' />
         </div>
+        <StaleNotice since={staleSince} />
       </header>
 
       {upNext.length > 0 ? (

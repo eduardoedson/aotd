@@ -4,6 +4,24 @@
 import { createStorageStore } from './storage';
 
 export const PUSH_API = '/api/push';
+// Shared with public/sw.js: the service worker reads the current endpoint here
+// when the browser replaces the subscription without telling it the old one.
+const META_CACHE = 'aotd-meta';
+const PUSH_ENDPOINT_KEY = '/__aotd/push-endpoint';
+
+async function rememberEndpoint(endpoint: string | null) {
+  try {
+    if (typeof caches === 'undefined') return;
+    const cache = await caches.open(META_CACHE);
+    if (endpoint) {
+      await cache.put(PUSH_ENDPOINT_KEY, new Response(endpoint));
+    } else {
+      await cache.delete(PUSH_ENDPOINT_KEY);
+    }
+  } catch {
+    // Only an aid for the service worker; push still works without it.
+  }
+}
 
 // True while this browser has an active push subscription registered on the server.
 export const pushActiveStore = createStorageStore<boolean>('aotd:push', false);
@@ -53,6 +71,7 @@ async function sendSubscription(subscription: PushSubscription, mediaIds: number
     body: JSON.stringify({ subscription: subscription.toJSON(), mediaIds }),
   });
   if (!response.ok) throw new Error(`Push server answered ${response.status}`);
+  await rememberEndpoint(subscription.endpoint);
 }
 
 // Subscribes this browser and registers its favorites. Returns false when push is
@@ -93,6 +112,7 @@ export async function syncPushFavorites(mediaIds: number[]) {
 
 export async function unsubscribeFromPush() {
   pushActiveStore.set(false);
+  await rememberEndpoint(null);
   const registration = await getRegistration();
   const subscription = await registration?.pushManager.getSubscription();
   if (!subscription) return;

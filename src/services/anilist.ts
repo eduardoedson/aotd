@@ -6,6 +6,9 @@ export const ANILIST_URL = 'https://graphql.anilist.co';
 const MAX_ATTEMPTS = 3;
 const MAX_DELAY_MS = 8000;
 const MAX_RETRY_AFTER_MS = 60000;
+// A request that hangs longer than this is aborted and retried like a timeout.
+export const REQUEST_TIMEOUT_MS = 15000;
+const TIMEOUT_STATUS = 408;
 const RETRYABLE_STATUS = new Set([408, 425, 429, 500, 502, 503, 504]);
 
 export class AnilistError extends Error {
@@ -70,17 +73,51 @@ interface GraphQLResponse<T> {
   errors?: { message: string; status?: number }[];
 }
 
+// Runs fetch with a time limit. The caller's signal still cancels at once, and a
+// timeout becomes a retryable 408 error instead of an AbortError.
+async function fetchWithTimeout(
+  init: RequestInit,
+  signal: AbortSignal | undefined,
+  timeoutMs: number,
+) {
+  const controller = new AbortController();
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
+  const onAbort = () => controller.abort();
+  if (signal?.aborted) controller.abort();
+  signal?.addEventListener('abort', onAbort, { once: true });
+
+  try {
+    return await fetch(ANILIST_URL, { ...init, signal: controller.signal });
+  } catch (error) {
+    if (timedOut && !signal?.aborted) {
+      throw new AnilistError('AniList did not answer in time', TIMEOUT_STATUS);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
+    signal?.removeEventListener('abort', onAbort);
+  }
+}
+
 async function requestOnce<T>(
   query: string,
   variables: Record<string, unknown>,
-  signal?: AbortSignal,
+  signal: AbortSignal | undefined,
+  timeoutMs: number,
 ): Promise<T> {
-  const response = await fetch(ANILIST_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-    body: JSON.stringify({ query, variables }),
+  const response = await fetchWithTimeout(
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ query, variables }),
+    },
     signal,
-  });
+    timeoutMs,
+  );
 
   let body: GraphQLResponse<T> | null;
   try {
@@ -106,12 +143,12 @@ async function requestOnce<T>(
 export async function anilistRequest<T>(
   query: string,
   variables: Record<string, unknown> = {},
-  { signal }: { signal?: AbortSignal } = {},
+  { signal, timeoutMs = REQUEST_TIMEOUT_MS }: { signal?: AbortSignal; timeoutMs?: number } = {},
 ): Promise<T> {
   let attempt = 1;
   for (;;) {
     try {
-      return await requestOnce<T>(query, variables, signal);
+      return await requestOnce<T>(query, variables, signal, timeoutMs);
     } catch (error) {
       if (attempt >= MAX_ATTEMPTS || !isRetryableError(error)) throw error;
       await sleep(getRetryDelay(attempt, error), signal);
@@ -141,6 +178,9 @@ export function describeAnilistError(error: unknown): string {
     (name === 'TypeError' || /fetch|network|load failed/i.test(message))
   ) {
     return 'AniList is unavailable right now. Their service may be down, please try again in a few minutes.';
+  }
+  if (status === TIMEOUT_STATUS) {
+    return 'AniList is taking too long to answer. Please try again in a few minutes.';
   }
   if (status === 429) return 'Too many requests to AniList. Please wait a minute and try again.';
   if (status === 403) return 'AniList is refusing requests right now. Please try again later.';

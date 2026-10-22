@@ -12,15 +12,17 @@ import {
   syncPushFavorites,
   unsubscribeFromPush,
 } from './push';
+import {
+  chunk,
+  collectDueReleases,
+  MEDIA_BATCH_SIZE,
+  mergeNextEpisodes,
+} from '../../shared/releaseTracker.js';
 
 const REFRESH_INTERVAL_MS = 30 * 60 * 1000;
 const CHECK_INTERVAL_MS = 30 * 1000;
 const PUSH_SYNC_DELAY_MS = 1500;
-// Releases older than this are marked as seen without a notification.
-const MAX_LATE_NOTIFICATION_MS = 3 * 24 * 60 * 60 * 1000;
 const DEFAULT_ICON = '/icons/icon-192.png';
-// AniList returns at most 50 media per page, so larger lists are queried in batches.
-const QUERY_BATCH_SIZE = 50;
 
 export interface TrackedRelease {
   episode: number;
@@ -122,30 +124,30 @@ async function showNotification(
   }
 }
 
-// Notifies about tracked episodes of favorites whose airing time has passed.
+// Notifies about tracked episodes of favorites whose airing time has passed. The
+// rules (late window, what counts as due) are shared with the push server.
 export function checkReleases(now = Date.now(), notify: Notify = showNotification) {
   const tracker = releaseTrackerStore.get() ?? {};
   const notifyIds = new Set(getNotifyIds().map(String));
-  let changed = false;
-  const next: ReleaseTracker = { ...tracker };
+  const { due, expired } = collectDueReleases(tracker, now, notifyIds);
+  if (due.length === 0 && expired.length === 0) return;
 
-  Object.entries(tracker).forEach(([id, entry]) => {
-    if (!notifyIds.has(id) || entry.notified || entry.airingAt * 1000 > now) return;
-    if (now - entry.airingAt * 1000 <= MAX_LATE_NOTIFICATION_MS) {
-      const date = toIsoDateInZone(new Date(entry.airingAt * 1000), getTimeZone());
-      notify(entry.title, {
-        body: `Episode ${entry.episode} is out now!`,
-        icon: entry.image || DEFAULT_ICON,
-        badge: DEFAULT_ICON,
-        tag: `aotd-${id}-${entry.episode}`,
-        data: { url: `/${date}/${id}` },
-      });
-    }
-    next[id] = { ...entry, notified: true };
-    changed = true;
+  due.forEach(({ id, entry }) => {
+    const date = toIsoDateInZone(new Date(entry.airingAt * 1000), getTimeZone());
+    notify(entry.title, {
+      body: `Episode ${entry.episode} is out now!`,
+      icon: entry.image || DEFAULT_ICON,
+      badge: DEFAULT_ICON,
+      tag: `aotd-${id}-${entry.episode}`,
+      data: { url: `/${date}/${id}` },
+    });
   });
 
-  if (changed) releaseTrackerStore.set(next);
+  const next: ReleaseTracker = { ...tracker };
+  [...due.map(({ id }) => id), ...expired].forEach((id) => {
+    next[id] = { ...tracker[id], notified: true };
+  });
+  releaseTrackerStore.set(next);
 }
 
 interface QueryClient {
@@ -156,7 +158,7 @@ const defaultClient: QueryClient = {
   query: (ids) =>
     anilistRequest<FavoriteEpisodesResponse>(FAVORITE_EPISODES_QUERY, {
       ids,
-      perPage: QUERY_BATCH_SIZE,
+      perPage: MEDIA_BATCH_SIZE,
     }),
 };
 
@@ -165,8 +167,8 @@ type FavoriteMedia = NonNullable<FavoriteEpisodesResponse['Page']>['media'][numb
 // Queries every id, one batch after the other to stay gentle with the AniList rate limit.
 async function fetchFavoriteMedia(client: QueryClient, ids: number[]) {
   const media: FavoriteMedia[] = [];
-  for (let index = 0; index < ids.length; index += QUERY_BATCH_SIZE) {
-    const data = await client.query(ids.slice(index, index + QUERY_BATCH_SIZE));
+  for (const batch of chunk(ids)) {
+    const data = await client.query(batch);
     media.push(...(data?.Page?.media ?? []));
   }
   return media;
@@ -183,36 +185,7 @@ export async function refreshReleaseTracker(
   if (ids.length === 0) return;
 
   const mediaList = await fetchFavoriteMedia(client, ids);
-  const tracker: ReleaseTracker = { ...(releaseTrackerStore.get() ?? {}) };
-
-  mediaList.forEach((media) => {
-    const upcoming = media.nextAiringEpisode;
-    const previous = tracker[media.id];
-    if (!upcoming) {
-      if (previous?.notified) delete tracker[media.id];
-      return;
-    }
-    if (
-      previous &&
-      previous.episode === upcoming.episode &&
-      previous.airingAt === upcoming.airingAt
-    ) {
-      return;
-    }
-    if (previous && !previous.notified && previous.airingAt * 1000 <= now) return;
-    tracker[media.id] = {
-      episode: upcoming.episode,
-      airingAt: upcoming.airingAt,
-      title: media.title?.userPreferred ?? 'New episode',
-      image: media.coverImage?.medium ?? null,
-      notified: false,
-    };
-  });
-
-  Object.keys(tracker).forEach((id) => {
-    if (!ids.includes(Number(id))) delete tracker[id];
-  });
-
+  const tracker = mergeNextEpisodes(releaseTrackerStore.get() ?? {}, mediaList, ids, now);
   releaseTrackerStore.set(tracker);
 }
 

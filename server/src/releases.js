@@ -1,9 +1,21 @@
-// Release tracking shared logic: which favorites have a new episode out, and what
-// to remember about the next one.
+// Push server release logic: which favorites have a new episode out, delivery to
+// each browser and the AniList lookups. The tracking rules themselves live in
+// shared/releaseTracker.js, which the browser uses too.
 
-export const MAX_LATE_NOTIFICATION_MS = 3 * 24 * 60 * 60 * 1000;
+import {
+  chunk,
+  collectDueReleases,
+  MAX_LATE_NOTIFICATION_MS,
+  MEDIA_BATCH_SIZE,
+  mergeNextEpisodes,
+} from '../../shared/releaseTracker.js';
+
+export { MAX_LATE_NOTIFICATION_MS };
+
 const ANILIST_URL = 'https://graphql.anilist.co';
-const CHUNK_SIZE = 50;
+const REQUEST_TIMEOUT_MS = 15000;
+const MAX_ATTEMPTS = 3;
+const MAX_RETRY_AFTER_MS = 60000;
 
 const QUERY = `
   query FavoriteNextEpisodes($ids: [Int], $perPage: Int) {
@@ -36,31 +48,25 @@ const releaseTag = (id, episode) => `aotd-${id}-${episode}`;
 // here: only releases older than the late window are closed, without a
 // notification. Delivery results are applied later by applyDeliveries.
 export function findReleases(tracker, now) {
-  const releases = [];
+  const { due, expired } = collectDueReleases(tracker, now);
   const next = { ...tracker };
-  let changed = false;
-
-  Object.entries(tracker).forEach(([id, entry]) => {
-    if (entry.notified || entry.airingAt * 1000 > now) return;
-    if (now - entry.airingAt * 1000 <= MAX_LATE_NOTIFICATION_MS) {
-      releases.push({
-        mediaId: Number(id),
-        episode: entry.episode,
-        payload: {
-          title: entry.title,
-          body: `Episode ${entry.episode} is out now!`,
-          icon: entry.image || '/icons/icon-192.png',
-          tag: releaseTag(id, entry.episode),
-          url: `/${toIsoDate(entry.airingAt)}/${id}`,
-        },
-      });
-      return;
-    }
-    next[id] = { ...entry, notified: true };
-    changed = true;
+  expired.forEach((id) => {
+    next[id] = { ...tracker[id], notified: true };
   });
 
-  return { releases, tracker: next, changed };
+  const releases = due.map(({ id, entry }) => ({
+    mediaId: Number(id),
+    episode: entry.episode,
+    payload: {
+      title: entry.title,
+      body: `Episode ${entry.episode} is out now!`,
+      icon: entry.image || '/icons/icon-192.png',
+      tag: releaseTag(id, entry.episode),
+      url: `/${toIsoDate(entry.airingAt)}/${id}`,
+    },
+  }));
+
+  return { releases, tracker: next, changed: expired.length > 0 };
 }
 
 // 404 and 410 mean the browser dropped the subscription for good.
@@ -149,54 +155,61 @@ export function applyDeliveries(data, result, now) {
 }
 
 // Merges fresh "next episode" data from AniList into the tracker.
-export function updateTracker(tracker, mediaList, trackedIds, now) {
-  const next = { ...tracker };
+export const updateTracker = mergeNextEpisodes;
 
-  mediaList.forEach((media) => {
-    const upcoming = media.nextAiringEpisode;
-    const previous = next[media.id];
-    if (!upcoming) {
-      if (previous?.notified) delete next[media.id];
-      return;
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const parseRetryAfter = (header) => {
+  if (!header) return null;
+  const seconds = Number(header);
+  if (Number.isFinite(seconds)) return Math.max(0, seconds * 1000);
+  const date = Date.parse(header);
+  return Number.isNaN(date) ? null : Math.max(0, date - Date.now());
+};
+
+const isRetryableStatus = (status) => status === 429 || status === 408 || status >= 500;
+
+const backoff = (attempt) => Math.min(1000 * 2 ** (attempt - 1), 8000);
+
+// One AniList page request with a timeout. Rate limits (429), server errors,
+// timeouts and network failures are retried, honouring Retry-After when AniList
+// sends it. Other client errors fail at once.
+async function requestBatch(ids, { fetchImpl, sleep, timeoutMs, maxAttempts }) {
+  for (let attempt = 1; ; attempt += 1) {
+    let response;
+    try {
+      response = await fetchImpl(ANILIST_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ query: QUERY, variables: { ids, perPage: MEDIA_BATCH_SIZE } }),
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+    } catch (error) {
+      if (attempt >= maxAttempts) throw error;
+      await sleep(backoff(attempt));
+      continue;
     }
-    if (
-      previous &&
-      previous.episode === upcoming.episode &&
-      previous.airingAt === upcoming.airingAt
-    ) {
-      return;
+
+    if (response.ok) {
+      const body = await response.json();
+      return body?.data?.Page?.media ?? [];
     }
-    // Keep an aired but not yet announced episode until it has been sent.
-    if (previous && !previous.notified && previous.airingAt * 1000 <= now) return;
-    next[media.id] = {
-      episode: upcoming.episode,
-      airingAt: upcoming.airingAt,
-      title: media.title?.userPreferred ?? 'New episode',
-      image: media.coverImage?.medium ?? null,
-      notified: false,
-    };
-  });
-
-  const wanted = new Set(trackedIds.map(String));
-  Object.keys(next).forEach((id) => {
-    if (!wanted.has(id)) delete next[id];
-  });
-
-  return next;
+    if (!isRetryableStatus(response.status) || attempt >= maxAttempts) {
+      throw new Error(`AniList answered ${response.status}`);
+    }
+    const retryAfter = parseRetryAfter(response.headers?.get?.('Retry-After') ?? null);
+    await sleep(Math.min(retryAfter ?? backoff(attempt), MAX_RETRY_AFTER_MS));
+  }
 }
 
-export async function fetchNextEpisodes(ids, fetchImpl = fetch) {
+export async function fetchNextEpisodes(
+  ids,
+  fetchImpl = fetch,
+  { sleep = wait, timeoutMs = REQUEST_TIMEOUT_MS, maxAttempts = MAX_ATTEMPTS } = {},
+) {
   const media = [];
-  for (let index = 0; index < ids.length; index += CHUNK_SIZE) {
-    const chunk = ids.slice(index, index + CHUNK_SIZE);
-    const response = await fetchImpl(ANILIST_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ query: QUERY, variables: { ids: chunk, perPage: CHUNK_SIZE } }),
-    });
-    if (!response.ok) throw new Error(`AniList answered ${response.status}`);
-    const body = await response.json();
-    media.push(...(body?.data?.Page?.media ?? []));
+  for (const batch of chunk(ids)) {
+    media.push(...(await requestBatch(batch, { fetchImpl, sleep, timeoutMs, maxAttempts })));
   }
   return media;
 }

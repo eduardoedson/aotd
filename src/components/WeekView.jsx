@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import FavoriteButton from './FavoriteButton';
+import StaleNotice from './StaleNotice';
 import Error from './Error';
 import { describeAnilistError } from '../services/anilist';
 import { useSchedule } from '../services/schedule';
@@ -37,7 +38,7 @@ function WeekView({ date, timeZone = 'utc', filters = NO_FILTERS }) {
   const { search } = useLocation();
   const days = getWeekDays(date);
   const range = getRange(getWeekStart(date), 7, timeZone);
-  const { items, error, loading, retry } = useSchedule(range, { loadAll: true });
+  const { items, error, loading, retry, staleSince } = useSchedule(range, { loadAll: true });
   const { isFavorite } = useFavorites();
   const preferences = usePreferences();
   const today = getToday(timeZone);
@@ -103,6 +104,7 @@ function WeekView({ date, timeZone = 'utc', filters = NO_FILTERS }) {
           ? `Loading the week… ${items.length} episodes so far`
           : `${items.length} episodes this week`}
       </p>
+      <StaleNotice since={staleSince} />
 
       <div className='week-tabs' role='tablist' aria-label='Day of the week'>
         {days.map((day) => (

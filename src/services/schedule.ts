@@ -1,16 +1,22 @@
 import { useEffect, useReducer } from 'react';
 import { anilistRequest } from './anilist';
-import { readPersistent, writePersistent } from './persistentCache';
+import { readPersistent, readPersistentEntry, writePersistent } from './persistentCache';
 import { canPrefetch } from './prefetch';
+import { pruneMap } from './boundedCache';
 import { getRange, shiftIsoDate, type TimeZoneMode, type UnixRange } from './globals';
 import { SCHEDULE_QUERY, type AiringItem, type ScheduleResponse } from './queries';
 
 export const PER_PAGE = 50;
 const CACHE_TTL_MS = 10 * 60 * 1000;
+// Enough for a few weeks of browsing back and forth, without growing forever.
+const MAX_CACHED_PAGES = 120;
+const MAX_TRACKED_RANGES = 60;
 
 interface PageResult {
   items: AiringItem[];
   hasNextPage: boolean;
+  // Set when AniList failed and an older saved copy of the page is used instead.
+  staleSince?: number;
 }
 
 // Pages already fetched, keyed by "start:end:page". Promises are stored so concurrent
@@ -18,6 +24,8 @@ interface PageResult {
 const pageCache = new Map<string, { promise: Promise<PageResult>; fetchedAt: number }>();
 // Remembers how many pages were loaded per range so coming back restores the list.
 const loadedPagesByRange = new Map<string, number>();
+
+export const getSchedulePageCacheSize = () => pageCache.size;
 
 export const clearScheduleCache = () => {
   pageCache.clear();
@@ -60,13 +68,18 @@ export function fetchSchedulePage(range: UnixRange, page: number): Promise<PageR
           return result;
         },
         (error: unknown) => {
-          const fallback = readPersistent<PageResult>(storageKey, PERSIST_FALLBACK_MS);
-          if (fallback) return fallback;
+          const fallback = readPersistentEntry<PageResult>(storageKey, PERSIST_FALLBACK_MS);
+          if (fallback) return { ...fallback.data, staleSince: fallback.savedAt };
           throw error;
         },
       );
 
+  pageCache.delete(key);
   pageCache.set(key, { promise, fetchedAt: Date.now() });
+  pruneMap(pageCache, {
+    maxEntries: MAX_CACHED_PAGES,
+    isExpired: (entry) => Date.now() - entry.fetchedAt >= CACHE_TTL_MS,
+  });
   promise.catch(() => pageCache.delete(key));
   return promise;
 }
@@ -77,10 +90,17 @@ interface State {
   requestedPage: number;
   hasNextPage: boolean;
   error: unknown;
+  staleSince: number | null;
 }
 
 type Action =
-  | { type: 'loaded'; page: number; items: AiringItem[]; hasNextPage: boolean }
+  | {
+      type: 'loaded';
+      page: number;
+      items: AiringItem[];
+      hasNextPage: boolean;
+      staleSince?: number;
+    }
   | { type: 'failed'; error: unknown }
   | { type: 'more' }
   | { type: 'retry' };
@@ -91,6 +111,7 @@ const createInitialState = (key: string): State => ({
   requestedPage: Math.max(1, loadedPagesByRange.get(key) ?? 1),
   hasNextPage: true,
   error: null,
+  staleSince: null,
 });
 
 function reducer(state: State, action: Action): State {
@@ -105,6 +126,11 @@ function reducer(state: State, action: Action): State {
         page: action.page,
         hasNextPage: action.hasNextPage,
         requestedPage: action.hasNextPage ? state.requestedPage : action.page,
+        // The oldest saved copy among the pages is what the notice reports.
+        staleSince:
+          action.staleSince === undefined
+            ? state.staleSince
+            : Math.min(state.staleSince ?? action.staleSince, action.staleSince),
       };
     }
     case 'failed':
@@ -141,7 +167,10 @@ export function useSchedule(range: UnixRange, { loadAll = false }: ScheduleOptio
     fetchSchedulePage({ start, end }, nextPage)
       .then((result) => {
         if (cancelled) return;
-        loadedPagesByRange.set(`${start}:${end}`, nextPage);
+        const range = `${start}:${end}`;
+        loadedPagesByRange.delete(range);
+        loadedPagesByRange.set(range, nextPage);
+        pruneMap(loadedPagesByRange, { maxEntries: MAX_TRACKED_RANGES, isExpired: () => false });
         dispatch({ type: 'loaded', page: nextPage, ...result });
       })
       .catch((error: unknown) => {
@@ -157,6 +186,7 @@ export function useSchedule(range: UnixRange, { loadAll = false }: ScheduleOptio
     items: state.items,
     error: state.error,
     hasNextPage: state.hasNextPage,
+    staleSince: state.staleSince,
     loading: shouldLoad,
     initialLoading: shouldLoad && state.page === 0,
     loadMore: () => dispatch({ type: 'more' }),

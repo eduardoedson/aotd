@@ -10,15 +10,24 @@
 #   ./scripts/deploy.sh --web-only    # build the site but skip COMMAND (push server)
 #   ./scripts/deploy.sh --clean       # drop old hashed assets instead of keeping them
 #   ./scripts/deploy.sh --diagnose    # only print the push server state on the server (no deploy)
+#   ./scripts/deploy.sh --trust-host  # first run only: record the server SSH key (see below)
+#
+# SSH host key: the server key is checked against scripts/.known_hosts (and the
+# system known_hosts). On the first deploy run once with --trust-host and compare
+# the printed fingerprint with the one shown on the server by
+#   ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub
+# or set WEB_HOST_FINGERPRINT=SHA256:... in scripts/.env to pin it directly.
 #
 # Steps:
 #   1. Loads credentials from scripts/.env (same format as the Akaread scripts)
 #   2. Uploads the project over SFTP, skipping unchanged files and removing on the
 #      server the files deleted locally from the code folders
-#   3. On the server: npm install and a build into a temporary folder, which then
-#      replaces dist/ in one move, so the site never serves a half built folder.
-#      Old hashed assets are copied over, so tabs opened before the deploy keep working
-#   4. Runs COMMAND from scripts/.env (default: npm install in server/ and a pm2
+#   3. On the server: npm ci (exact versions from package-lock.json) and a build
+#      into a temporary folder, which then replaces dist/ in one move, so the site
+#      never serves a half built folder. Hashed assets from the last
+#      ASSET_RETENTION_DAYS days (default 30) are copied over, so tabs opened before
+#      the deploy keep working, and older ones are dropped
+#   4. Runs COMMAND from scripts/.env (default: npm ci in server/ and a pm2
 #      reload of the push server, or pm2 start on the first deploy)
 #   5. Waits until the site and the push API answer again
 #
@@ -38,6 +47,7 @@ RUN_CHECKS=false
 WEB_ONLY=false
 CLEAN_ASSETS=false
 DIAGNOSE=false
+TRUST_HOST=false
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --full) FULL_UPLOAD=true ;;
@@ -45,7 +55,8 @@ while [[ $# -gt 0 ]]; do
     --web-only) WEB_ONLY=true ;;
     --clean) CLEAN_ASSETS=true ;;
     --diagnose) DIAGNOSE=true ;;
-    -h|--help) sed -n '2,26p' "$0"; exit 0 ;;
+    --trust-host) TRUST_HOST=true ;;
+    -h|--help) sed -n '2,35p' "$0"; exit 0 ;;
     *) die "Unknown option: $1 (see --help)" ;;
   esac
   shift
@@ -88,10 +99,11 @@ if [[ "$RUN_CHECKS" == true ]]; then
   command -v npm &>/dev/null || die "npm is required for --check"
   cd "$ROOT_DIR"
   [[ -d node_modules ]] || npm ci --no-audit --no-fund
-  info "Running lint, typecheck and unit tests..."
+  [[ -d server/node_modules ]] || npm --prefix server ci --no-audit --no-fund
+  info "Running lint, typecheck, unit tests and push server tests..."
   npm run lint
   npm run typecheck
-  npm test
+  npm run test:all
   success "  Checks passed"
 fi
 
@@ -103,12 +115,15 @@ export DEPLOY_FULL_UPLOAD="$FULL_UPLOAD"
 export DEPLOY_WEB_ONLY="$WEB_ONLY"
 export DEPLOY_CLEAN_ASSETS="$CLEAN_ASSETS"
 export DEPLOY_DIAGNOSE="$DIAGNOSE"
+export DEPLOY_TRUST_HOST="$TRUST_HOST"
 export DEPLOY_VERSION="$(git -C "$ROOT_DIR" rev-parse --short HEAD 2>/dev/null || date +%Y%m%d%H%M%S)"
 export PYTHONIOENCODING="utf-8"
 export PYTHONUNBUFFERED="1"
 
 # ── Deploy ────────────────────────────────────────────────────────────────────
 "$PYTHON" - <<'PYEOF'
+import base64
+import hashlib
 import os
 import posixpath
 import re
@@ -168,7 +183,7 @@ SITE_URL = (env.get("SITE_URL") or "https://aotd.eduardoalves.tech").rstrip("/")
 # Runs after the build, from the project root on the server
 DEFAULT_COMMAND = (
     "cd server && "
-    "npm install --omit=dev --no-audit --no-fund && "
+    "npm ci --omit=dev --no-audit --no-fund && "
     # creates server/.env with VAPID keys on the first deploy, never changes it later
     "npm run setup-env && "
     # delete + start (not reload) so pm2 also picks up a new Node interpreter
@@ -177,8 +192,13 @@ DEFAULT_COMMAND = (
     "pm2 save"
 )
 COMMAND = env.get("COMMAND") or DEFAULT_COMMAND
-# Node major version used to build on the server (Vite 8 needs 20.19 or newer)
-NODE_VERSION = env.get("NODE_VERSION") or "22"
+# Node version used to build on the server and to run the push server. 22.22 is
+# the oldest one every dev dependency accepts (jsdom); nvm installs it when missing.
+NODE_VERSION = env.get("NODE_VERSION") or "22.22"
+# Hashed assets of older deploys are kept this many days for tabs still open
+ASSET_RETENTION_DAYS = int(env.get("ASSET_RETENTION_DAYS") or 30)
+# Optional pinned SSH host key fingerprint, as printed by ssh-keygen -lf (SHA256:...)
+HOST_FINGERPRINT = (env.get("WEB_HOST_FINGERPRINT") or "").strip()
 
 LOCAL_ROOT = os.environ["DEPLOY_ROOT_DIR"]
 FULL_UPLOAD = os.environ.get("DEPLOY_FULL_UPLOAD") == "true"
@@ -186,16 +206,18 @@ WEB_ONLY = os.environ.get("DEPLOY_WEB_ONLY") == "true"
 CLEAN_ASSETS = os.environ.get("DEPLOY_CLEAN_ASSETS") == "true"
 VERSION = os.environ.get("DEPLOY_VERSION") or "unknown"
 DIAGNOSE = os.environ.get("DEPLOY_DIAGNOSE") == "true"
+TRUST_HOST = os.environ.get("DEPLOY_TRUST_HOST") == "true"
+KNOWN_HOSTS = os.path.join(LOCAL_ROOT, "scripts", ".known_hosts")
 
 # Never uploaded, at any depth: WEB_IGNORED_FOLDER plus the build output, which is made on the server
 DEFAULT_IGNORED = "node_modules,.history,.git,.vscode,design,coverage,playwright-report,test-results,_to_delete"
 IGNORED_NAMES = {
     item.strip() for item in (env.get("WEB_IGNORED_FOLDER") or DEFAULT_IGNORED).split(",") if item.strip()
-} | {"dist", ".dist-next", ".dist-old", ".DS_Store"}
+} | {"dist", ".dist-next", ".dist-old", ".DS_Store", ".github"}
 # Never uploaded, by path: secrets and data that only exist on the server
-IGNORED_PATHS = {"scripts/.env", "server/.env", "server/data"}
+IGNORED_PATHS = {"scripts/.env", "scripts/.known_hosts", "server/.env", "server/data", "server/data-dev"}
 # Code folders mirror the local copy exactly: files deleted locally are removed remotely
-PRUNE_DIRS = {"src", "public", "e2e", "deploy", "scripts", "server/src", "server/test"}
+PRUNE_DIRS = {"src", "shared", "public", "e2e", "deploy", "scripts", "server/src", "server/test"}
 
 success(f"Config loaded: {USER}@{HOST}:{REMOTE_ROOT} (version {VERSION})")
 
@@ -203,10 +225,42 @@ success(f"Config loaded: {USER}@{HOST}:{REMOTE_ROOT} (version {VERSION})")
 ssh = None
 sftp = None
 
+def fingerprint(key):
+    digest = hashlib.sha256(key.asbytes()).digest()
+    return "SHA256:" + base64.b64encode(digest).decode().rstrip("=")
+
+# Unknown host keys are refused, so a man in the middle cannot catch the password.
+# A key is only recorded when it matches WEB_HOST_FINGERPRINT, or once on request
+# with --trust-host after the person compared the fingerprint.
+class HostKeyPolicy(paramiko.MissingHostKeyPolicy):
+    def missing_host_key(self, client, hostname, key):
+        seen = fingerprint(key)
+        if HOST_FINGERPRINT:
+            if seen != HOST_FINGERPRINT:
+                raise paramiko.SSHException(
+                    f"Host key {seen} does not match WEB_HOST_FINGERPRINT {HOST_FINGERPRINT}"
+                )
+        elif not TRUST_HOST:
+            raise paramiko.SSHException(
+                f"Unknown host key {key.get_name()} {seen}. Check it on the server with "
+                "'ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub', then run once with "
+                "--trust-host or set WEB_HOST_FINGERPRINT in scripts/.env"
+            )
+        else:
+            warn(f"  Trusting host key {key.get_name()} {seen} (--trust-host)")
+        client.get_host_keys().add(hostname, key.get_name(), key)
+        client.save_host_keys(KNOWN_HOSTS)
+
 def connect():
     global ssh, sftp
     ssh = paramiko.SSHClient()
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    try:
+        ssh.load_system_host_keys()
+    except Exception:
+        pass
+    if os.path.exists(KNOWN_HOSTS):
+        ssh.load_host_keys(KNOWN_HOSTS)
+    ssh.set_missing_host_key_policy(HostKeyPolicy())
     ssh.connect(
         HOST,
         port=PORT,
@@ -399,14 +453,18 @@ node_setup = (
 # The build goes to .dist-next and only replaces dist/ when it succeeded, so a
 # failed build leaves the live site untouched.
 info("Step 2/4: installing dependencies and building on the server")
+# Only recent old assets are carried over. -p keeps their dates, so each one ages
+# out ASSET_RETENTION_DAYS after the deploy that built it.
 keep_assets = "" if CLEAN_ASSETS else (
-    "if [ -d dist/assets ]; then mkdir -p .dist-next/assets && (cp -rn dist/assets/. .dist-next/assets/ 2>/dev/null || true); fi && "
+    "if [ -d dist/assets ]; then mkdir -p .dist-next/assets && "
+    f"(find dist/assets -maxdepth 1 -type f -mtime -{ASSET_RETENTION_DAYS} "
+    "-exec cp -pn {} .dist-next/assets/ \\; 2>/dev/null || true); fi && "
 )
 build_command = (
     f"{node_setup}"
     "echo \"Using Node $(node -v)\" && "
     f"cd {root} && "
-    "npm install --no-audit --no-fund && "
+    "npm ci --no-audit --no-fund && "
     "rm -rf .dist-next && "
     f"VITE_APP_VERSION={shlex.quote(VERSION)} npx vite build --outDir .dist-next --emptyOutDir && "
     f"{keep_assets}"

@@ -1,0 +1,20 @@
+@use '../settings/variables' as *;
+
+.stale-notice {
+  max-width: 720px;
+  margin: 0.85rem auto 0;
+  padding: 0.6rem 0.9rem;
+  border: 1px solid rgba($yellow, 0.45);
+  border-radius: 10px;
+  background: rgba($yellow, 0.1);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: center;
+}
+
+html[data-theme='light'] .stale-notice {
+  border-color: rgba(#9a6b00, 0.45);
+  background: rgba($yellow, 0.25);
+  color: #3d2d00;
+}

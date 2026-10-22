@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import DOMPurify from 'dompurify';
 import Tag from '../components/Tag';
+import StaleNotice from '../components/StaleNotice';
 import MiniCard from '../components/MiniCard';
 import StarRating from '../components/StarRating';
 import FavoriteButton from '../components/FavoriteButton';
@@ -443,7 +444,7 @@ function Detail() {
   const validId = Number.isInteger(numericId) && numericId > 0;
   const validDate = isValidDate(date);
   const variables = useMemo(() => ({ id: numericId }), [numericId]);
-  const { loading, error, data } = useAnilistQuery(DETAIL_QUERY, variables, {
+  const { loading, error, data, staleSince } = useAnilistQuery(DETAIL_QUERY, variables, {
     skip: !validId || !validDate,
   });
   const info = data?.Media;
@@ -478,6 +479,7 @@ function Detail() {
 
   return (
     <div className='detail-container'>
+      <StaleNotice since={staleSince} />
       <DetailView info={info} date={date} search={search} episodeParam={episodeParam} />
     </div>
   );

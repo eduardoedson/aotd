@@ -1,5 +1,6 @@
 import http from 'node:http';
 import webpush from 'web-push';
+import { createApp } from './app.js';
 import { createStore } from './store.js';
 import {
   applyDeliveries,
@@ -17,117 +18,31 @@ const {
   VAPID_PUBLIC_KEY,
   VAPID_PRIVATE_KEY,
   VAPID_SUBJECT = 'mailto:admin@eduardoalves.tech',
+  // Comma separated, e.g. "https://aotd.eduardoalves.tech,http://localhost:7115".
   ALLOWED_ORIGIN = 'https://aotd.eduardoalves.tech',
   REFRESH_MINUTES = '15',
 } = process.env;
 
 if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
-  console.error('Missing VAPID keys. Run "npm run generate-vapid" and set the variables.');
+  console.error('Missing VAPID keys. Run "npm run setup-env" or "npm run generate-vapid".');
   process.exit(1);
 }
 
 webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
-const MAX_BODY_BYTES = 16 * 1024;
-const MAX_MEDIA_IDS = 500;
-const MAX_SUBSCRIPTIONS = 50000;
 const CHECK_INTERVAL_MS = 60 * 1000;
 const REFRESH_INTERVAL_MS = Number(REFRESH_MINUTES) * 60 * 1000;
+// Subscription changes trigger an AniList refresh, but never more than once a minute.
+const CHANGE_REFRESH_DELAY_MS = 5000;
+const MIN_REFRESH_GAP_MS = 60 * 1000;
 
 const store = await createStore(DATA_DIR);
 
-const sendJson = (response, status, body) => {
-  response.writeHead(status, {
-    'Content-Type': 'application/json',
-    'Cache-Control': 'no-store',
-  });
-  response.end(body === undefined ? '' : JSON.stringify(body));
-};
-
-const readJson = (request) =>
-  new Promise((resolve, reject) => {
-    let size = 0;
-    const chunks = [];
-    request.on('data', (chunk) => {
-      size += chunk.length;
-      if (size > MAX_BODY_BYTES) {
-        reject(Object.assign(new Error('Body too large'), { status: 413 }));
-        request.destroy();
-        return;
-      }
-      chunks.push(chunk);
-    });
-    request.on('end', () => {
-      try {
-        resolve(JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}'));
-      } catch {
-        reject(Object.assign(new Error('Invalid JSON'), { status: 400 }));
-      }
-    });
-    request.on('error', reject);
-  });
-
-const isValidSubscription = (value) => {
-  if (!value || typeof value !== 'object') return false;
-  try {
-    const url = new URL(value.endpoint);
-    if (url.protocol !== 'https:') return false;
-  } catch {
-    return false;
-  }
-  return typeof value.keys?.p256dh === 'string' && typeof value.keys?.auth === 'string';
-};
-
-const sanitizeIds = (value) =>
-  Array.isArray(value)
-    ? [...new Set(value.filter((id) => Number.isInteger(id) && id > 0))].slice(0, MAX_MEDIA_IDS)
-    : null;
-
-// Browsers always send Origin on cross site POST requests; reject foreign pages.
-const isAllowedOrigin = (request) => {
-  const origin = request.headers.origin;
-  return !origin || origin === ALLOWED_ORIGIN;
-};
-
-async function handle(request, response) {
-  const { pathname } = new URL(request.url, 'http://localhost');
-
-  if (request.method === 'GET' && pathname === '/api/push/public-key') {
-    return sendJson(response, 200, { publicKey: VAPID_PUBLIC_KEY });
-  }
-
-  if (pathname !== '/api/push/subscription') return sendJson(response, 404, { error: 'Not found' });
-  if (!isAllowedOrigin(request)) return sendJson(response, 403, { error: 'Forbidden' });
-
-  if (request.method === 'POST') {
-    const body = await readJson(request);
-    const mediaIds = sanitizeIds(body.mediaIds);
-    if (!isValidSubscription(body.subscription) || !mediaIds) {
-      return sendJson(response, 400, { error: 'Invalid subscription' });
-    }
-    const known = Boolean(store.data.subscriptions[body.subscription.endpoint]);
-    if (!known && Object.keys(store.data.subscriptions).length >= MAX_SUBSCRIPTIONS) {
-      return sendJson(response, 503, { error: 'Subscription limit reached' });
-    }
-    await store.upsertSubscription(
-      { endpoint: body.subscription.endpoint, keys: body.subscription.keys },
-      mediaIds,
-    );
-    refreshSoon();
-    return sendJson(response, 204);
-  }
-
-  if (request.method === 'DELETE') {
-    const body = await readJson(request);
-    if (typeof body.endpoint === 'string') await store.removeSubscription(body.endpoint);
-    return sendJson(response, 204);
-  }
-
-  return sendJson(response, 405, { error: 'Method not allowed' });
-}
-
 const sendPush = (subscription, payload) =>
-  webpush.sendNotification(subscription, JSON.stringify(payload), { TTL: 6 * 60 * 60 });
+  webpush.sendNotification(subscription, JSON.stringify(payload), {
+    TTL: 6 * 60 * 60,
+    timeout: 15000,
+  });
 
 // A release is only marked as sent after every follower received it. Transient
 // failures stay pending and are retried on the next check, while the delivery
@@ -162,30 +77,48 @@ function sendReleases(now = Date.now()) {
   return releaseRun;
 }
 
-async function refreshTracker(now = Date.now()) {
+async function runRefresh(now) {
   await sendReleases(now);
   const ids = collectMediaIds(store.data.subscriptions);
   if (ids.length === 0) return;
   const media = await fetchNextEpisodes(ids);
-  await store.setTracker(updateTracker(store.data.tracker, media, ids, now));
+  await store.setTracker(updateTracker(store.data.tracker, media, ids, Date.now()));
+}
+
+let refreshRun = null;
+let lastRefreshAt = 0;
+function refreshTracker(now = Date.now()) {
+  if (!refreshRun) {
+    refreshRun = runRefresh(now).finally(() => {
+      refreshRun = null;
+      lastRefreshAt = Date.now();
+    });
+  }
+  return refreshRun;
 }
 
 let refreshTimer = null;
 function refreshSoon() {
-  clearTimeout(refreshTimer);
+  if (refreshTimer) return;
+  const delay = Math.max(CHANGE_REFRESH_DELAY_MS, lastRefreshAt + MIN_REFRESH_GAP_MS - Date.now());
   refreshTimer = setTimeout(() => {
+    refreshTimer = null;
     refreshTracker().catch((error) => console.error('Refresh failed', error.message));
-  }, 5000);
+  }, delay);
 }
 
-const server = http.createServer((request, response) => {
-  handle(request, response).catch((error) => {
-    sendJson(response, error.status ?? 500, {
-      error: error.status ? error.message : 'Server error',
-    });
-    if (!error.status) console.error(error);
-  });
+const app = createApp({
+  store,
+  publicKey: VAPID_PUBLIC_KEY,
+  allowedOrigins: ALLOWED_ORIGIN.split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean),
+  onSubscriptionsChanged: refreshSoon,
 });
+
+const server = http.createServer(app);
+server.requestTimeout = 15000;
+server.headersTimeout = 10000;
 
 server.listen(Number(PORT), HOST, () => {
   console.log(`AOTD push server listening on http://${HOST}:${PORT}`);

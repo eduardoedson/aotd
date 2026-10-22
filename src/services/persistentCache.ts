@@ -63,11 +63,11 @@ const readEntry = <T>(key: string, now: number): ReadResult<T> => {
   }
 };
 
-// Returns the cached value when it is younger than maxAgeMs, otherwise undefined.
-// Entries that are corrupted or older than MAX_STORED_AGE_MS are deleted and
-// dropped from the index. Younger entries are kept even when they are too old for
-// this caller, since another caller may still use them as an offline fallback.
-export function readPersistent<T>(key: string, maxAgeMs: number, now = Date.now()) {
+// Returns the cached value and when it was saved, when it is younger than
+// maxAgeMs. Entries that are corrupted or older than MAX_STORED_AGE_MS are deleted
+// and dropped from the index. Younger entries are kept even when they are too old
+// for this caller, since another caller may still use them as an offline fallback.
+export function readPersistentEntry<T>(key: string, maxAgeMs: number, now = Date.now()) {
   const result = readEntry<T>(key, now);
   if (result.status === 'dead') {
     const index = readIndex();
@@ -76,7 +76,12 @@ export function readPersistent<T>(key: string, maxAgeMs: number, now = Date.now(
     return undefined;
   }
   if (result.status !== 'ok' || now - result.entry.savedAt > maxAgeMs) return undefined;
-  return result.entry.data;
+  return result.entry;
+}
+
+// Returns the cached value when it is younger than maxAgeMs, otherwise undefined.
+export function readPersistent<T>(key: string, maxAgeMs: number, now = Date.now()) {
+  return readPersistentEntry<T>(key, maxAgeMs, now)?.data;
 }
 
 // Same as readPersistent but never writes to storage, so it is safe to call

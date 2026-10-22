@@ -5,6 +5,7 @@ import Day from './Day';
 import { clearScheduleCache } from '../services/schedule';
 import { favoritesStore } from '../services/favorites';
 import { getDayRange } from '../services/globals';
+import { writePersistent } from '../services/persistentCache';
 import { graphQLError, mockAnilist } from '../test/anilistMock';
 
 const DATE = '2026-10-21';
@@ -55,6 +56,23 @@ afterEach(() => {
 });
 
 describe('Day', () => {
+  it('shows saved episodes with a notice when AniList cannot be reached', async () => {
+    writePersistent(
+      `schedule:${RANGE.start}:${RANGE.end}:1`,
+      { items: [makeItem(1, 'Saved Show')], hasNextPage: false },
+      Date.now() - 2 * 60 * 60 * 1000,
+    );
+    mockAnilist(({ name, variables }) =>
+      name === 'Schedule' && variables.start === RANGE.start
+        ? graphQLError(400, 'Service down')
+        : page([], 1, false),
+    );
+    renderDay();
+
+    expect(await screen.findByText(/AniList could not be reached/)).toBeInTheDocument();
+    expect(screen.getAllByText('Saved Show').length).toBeGreaterThan(0);
+  });
+
   it('loads the next page when more episodes are requested', async () => {
     serveDay([
       page([makeItem(1, 'First Show'), makeItem(9, 'Adult Show', [], true)], 1, true),

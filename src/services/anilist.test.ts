@@ -44,7 +44,54 @@ describe('retry policy', () => {
   });
 });
 
+// Never resolves on its own, only rejects when the request is aborted.
+const hangingFetch = (_url: string, init: RequestInit) =>
+  new Promise<Response>((_resolve, reject) => {
+    init.signal?.addEventListener('abort', () =>
+      reject(new DOMException('The operation was aborted.', 'AbortError')),
+    );
+  });
+
 describe('anilistRequest', () => {
+  it('aborts a hanging request and retries it as a timeout', async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi
+      .fn()
+      .mockImplementationOnce(hangingFetch)
+      .mockResolvedValue(jsonResponse({ data: { Media: { id: 2 } } }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const request = anilistRequest('query X { a }', {}, { timeoutMs: 100 });
+    await vi.advanceTimersByTimeAsync(100);
+    await vi.advanceTimersByTimeAsync(1000);
+
+    await expect(request).resolves.toEqual({ Media: { id: 2 } });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('reports a timeout after the last attempt', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(hangingFetch));
+
+    const request = anilistRequest('query X { a }', {}, { timeoutMs: 100 });
+    const outcome = expect(request).rejects.toMatchObject({ status: 408 });
+    await vi.advanceTimersByTimeAsync(10000);
+    await outcome;
+    expect(describeAnilistError(new AnilistError('slow', 408))).toMatch(/too long/);
+  });
+
+  it('stops at once when the caller aborts', async () => {
+    const fetchMock = vi.fn().mockImplementation(hangingFetch);
+    vi.stubGlobal('fetch', fetchMock);
+    const controller = new AbortController();
+
+    const request = anilistRequest('query X { a }', {}, { signal: controller.signal });
+    controller.abort();
+
+    await expect(request).rejects.toMatchObject({ name: 'AbortError' });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it('returns the data of a successful response', async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ data: { Media: { id: 1 } } }));
     vi.stubGlobal('fetch', fetchMock);

@@ -38,8 +38,19 @@ describe('push', () => {
       .mockResolvedValueOnce(new Response(JSON.stringify({ publicKey: 'AQID' }), { status: 200 }))
       .mockResolvedValueOnce(new Response(null, { status: 204 }));
     vi.stubGlobal('fetch', fetchMock);
+    const stored = new Map<string, string>();
+    vi.stubGlobal('caches', {
+      open: async () => ({
+        put: async (key: string, response: Response) => {
+          stored.set(key, await response.text());
+        },
+        delete: async (key: string) => stored.delete(key),
+      }),
+    });
 
     await expect(subscribeToPush([5, 7])).resolves.toBe(true);
+    // The service worker needs the endpoint to migrate a replaced subscription.
+    expect(stored.get('/__aotd/push-endpoint')).toBe('https://push.example/1');
 
     expect(registration.pushManager.subscribe).toHaveBeenCalledWith(
       expect.objectContaining({ userVisibleOnly: true }),

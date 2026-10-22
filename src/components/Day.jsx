@@ -6,6 +6,7 @@ import Loading from './Loading';
 import Error from './Error';
 import { describeAnilistError } from '../services/anilist';
 import NextEpisodeJump from './NextEpisodeJump';
+import StaleNotice from './StaleNotice';
 import { useDaySchedule } from '../services/schedule';
 import { useFavorites } from '../services/favorites';
 import { byAiringTime, matchesFilters } from '../services/filters';
@@ -31,11 +32,8 @@ function Day({ date, timeZone = 'utc', filters = NO_FILTERS }) {
   const filtering = Boolean(
     filters.query || filters.genre || filters.favoritesOnly || filters.status || filters.platform,
   );
-  const { items, error, hasNextPage, loading, initialLoading, loadMore, retry } = useDaySchedule(
-    date,
-    timeZone,
-    { loadAll: filtering },
-  );
+  const { items, error, hasNextPage, loading, initialLoading, loadMore, retry, staleSince } =
+    useDaySchedule(date, timeZone, { loadAll: filtering });
   const { isFavorite } = useFavorites();
 
   const { query, genre, favoritesOnly, status, platform } = filters;
@@ -106,6 +104,7 @@ function Day({ date, timeZone = 'utc', filters = NO_FILTERS }) {
         </p>
         {date === getToday(timeZone) ? <NextEpisodeJump items={visibleItems} /> : null}
       </div>
+      <StaleNotice since={staleSince} />
 
       {visibleItems.length > 0 ? (
         <div className='day-container'>

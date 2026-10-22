@@ -9,6 +9,7 @@
   },
   "scripts": {
     "start": "node src/index.js",
+    "dev": "node src/dev.js",
     "generate-vapid": "node src/generateVapid.js",
     "setup-env": "node src/setupEnv.js",
     "test": "node --test"

@@ -16,14 +16,18 @@ import { createStore } from '../src/store.js';
 
 // Temporary data lives inside the project, which is always writable, instead of
 // the system temp folder that sandboxes and some Windows setups restrict.
-const TEMP_ROOT = fileURLToPath(new URL('../.test-tmp/', import.meta.url));
+const TEMP_ROOT = fileURLToPath(new URL('../.test-tmp/releases/', import.meta.url));
 
 const makeTempDir = async () => {
   await fs.mkdir(TEMP_ROOT, { recursive: true });
   return fs.mkdtemp(path.join(TEMP_ROOT, 'store-'));
 };
 
-after(() => fs.rm(TEMP_ROOT, { recursive: true, force: true }));
+after(async () => {
+  await fs.rm(TEMP_ROOT, { recursive: true, force: true });
+  // The shared parent folder goes away once every test file cleaned up its own.
+  await fs.rmdir(path.dirname(TEMP_ROOT)).catch(() => {});
+});
 
 const NOW = Date.parse('2026-10-21T12:00:00Z');
 const seconds = (ms) => Math.floor(ms / 1000);
@@ -194,6 +198,68 @@ test('fetches next episodes in chunks of 50', async () => {
   const media = await fetchNextEpisodes(ids, fakeFetch);
   assert.deepEqual(calls, [50, 50, 20]);
   assert.equal(media.length, 120);
+});
+
+const jsonResponse = (status, body, headers = {}) => ({
+  ok: status >= 200 && status < 300,
+  status,
+  headers: new Headers(headers),
+  json: async () => body,
+});
+
+test('retries AniList rate limits using Retry-After', async () => {
+  const delays = [];
+  const responses = [
+    jsonResponse(429, {}, { 'Retry-After': '7' }),
+    jsonResponse(200, { data: { Page: { media: [{ id: 1 }] } } }),
+  ];
+  const media = await fetchNextEpisodes([1], async () => responses.shift(), {
+    sleep: async (ms) => delays.push(ms),
+  });
+  assert.deepEqual(media, [{ id: 1 }]);
+  assert.deepEqual(delays, [7000]);
+});
+
+test('retries network failures and timeouts, then gives up', async () => {
+  let calls = 0;
+  const failing = async () => {
+    calls += 1;
+    throw Object.assign(new Error('The operation was aborted due to timeout'), {
+      name: 'TimeoutError',
+    });
+  };
+  await assert.rejects(
+    fetchNextEpisodes([1], failing, { sleep: async () => {}, maxAttempts: 3 }),
+    /timeout/,
+  );
+  assert.equal(calls, 3);
+});
+
+test('does not retry AniList client errors', async () => {
+  let calls = 0;
+  const badRequest = async () => {
+    calls += 1;
+    return jsonResponse(400, {});
+  };
+  await assert.rejects(fetchNextEpisodes([1], badRequest, { sleep: async () => {} }), /400/);
+  assert.equal(calls, 1);
+});
+
+test('aborts a request that takes longer than the timeout', async () => {
+  const hanging = (_url, init) =>
+    new Promise((_resolve, reject) => {
+      init.signal.addEventListener('abort', () => reject(init.signal.reason));
+    });
+  // AbortSignal.timeout does not keep the process alive on its own.
+  const keepAlive = setTimeout(() => {}, 5000);
+  try {
+    await assert.rejects(
+      fetchNextEpisodes([1], hanging, { sleep: async () => {}, timeoutMs: 20, maxAttempts: 1 }),
+      (error) => error.name === 'TimeoutError',
+    );
+  } finally {
+    clearTimeout(keepAlive);
+  }
 });
 
 test('store persists subscriptions to disk', async () => {
