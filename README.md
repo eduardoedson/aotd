@@ -1,150 +1,149 @@
 # AOTD :: Anime of the Day
 
-Calendário web de lançamentos de anime. O aplicativo consulta a API GraphQL do AniList, lista os episódios programados para cada dia e apresenta detalhes das obras.
+Web calendar of anime releases. The app queries the AniList GraphQL API, lists the episodes scheduled for each day and shows details about every title.
 
-![AOTD: agenda diária de anime](docs/screenshot.webp)
+![AOTD: daily anime schedule](docs/screenshot.webp)
 
-## Funcionalidades
+## Features
 
-- Agenda diária com scroll infinito e vista semanal (sete colunas)
-- Hora local ou UTC, escolhida na barra do topo
-- Contagem regressiva calculada a partir do `airingAt`
-- Botão "Next up" que leva ao próximo episódio do dia
-- Pesquisa por título, filtro por género e "só os meus favoritos", guardados na URL
-- Favoritos no navegador, sincronizados entre abas
-- Ficheiro `.ics` para adicionar episódios ao calendário
-- Partilha nativa (ou cópia do link) na página de detalhe
-- Atalhos: ← e → mudam de dia (ou semana), T volta a hoje
-- PWA instalável, com o shell disponível offline
-- Notificações de lançamento por Web Push, mesmo com o site fechado
-- Banner de cookies: o Google Analytics só carrega depois de aceite
-- Fonte Roboto servida pelo próprio site, sem pedidos ao Google Fonts
-- Monitorização de erros com Sentry (opcional)
+- Daily schedule with infinite scroll and a weekly view (seven columns)
+- Local time or UTC, picked in the top bar
+- Countdowns calculated from `airingAt`
+- "Next up" button that jumps to the next episode of the day
+- Search by title and filters by genre, status, platform and "only my favorites", kept in the URL
+- Favorites stored in the browser and synced across tabs
+- "My library" page with favorites, upcoming episodes and recently viewed titles
+- `.ics` file to add episodes to a calendar
+- Native sharing (or copying the link) on the details page
+- Shortcuts: ← and → change the day (or week), T goes back to today
+- Installable PWA, with the app shell available offline
+- Release notifications through Web Push, even with the site closed
+- Saved data shown with a notice when AniList cannot be reached
+- Cookie banner: Google Analytics only loads after it is accepted
+- Roboto font served by the site itself, with no requests to Google Fonts
+- Error monitoring with Sentry (optional)
 
-## Requisitos
+## Requirements
 
-- Node.js 20 ou superior
-- npm 10 ou superior
+- Node.js 22.22 or newer (the test tools need it; the build alone runs on 20.19 or newer)
+- npm 10 or newer
 
-## Desenvolvimento
+## Development
 
 ```bash
 npm run install:all
 npm run dev
 ```
 
-O `install:all` instala as dependências do frontend e do servidor de push (`server/`), que tem o seu próprio `package.json`. Um `npm install` simples na raiz não instala `server/node_modules`, e os testes do servidor falham sem o `web-push`.
+`install:all` installs the dependencies of the frontend and of the push server (`server/`), which has its own `package.json`. A plain `npm install` in the root does not install `server/node_modules`, and the server tests fail without `web-push`.
 
-Por padrão, o servidor abre em `http://localhost:7115`. Copie `.env.example` para `.env` para mudar a porta ou configurar o Sentry.
+By default the dev server opens on `http://localhost:7115`. Copy `.env.example` to `.env` to change the port or set up Sentry.
 
-| Variável           | Uso                                                       |
-| ------------------ | --------------------------------------------------------- |
-| `PORT`             | Porta do servidor de desenvolvimento                      |
-| `VITE_SENTRY_DSN`  | DSN do Sentry; vazio desliga a monitorização              |
-| `PUSH_SERVER_PORT` | Porta do servidor de push local, usada pelo proxy do Vite |
+| Variable           | Purpose                                               |
+| ------------------ | ----------------------------------------------------- |
+| `PORT`             | Port of the development server                        |
+| `VITE_SENTRY_DSN`  | Sentry DSN; empty turns monitoring off                |
+| `PUSH_SERVER_PORT` | Port of the local push server, used by the Vite proxy |
 
-### Notificações push em desenvolvimento
+### Push notifications in development
 
 ```bash
-npm --prefix server run setup-env   # uma vez: cria server/.env com as chaves VAPID
-npm run dev:push                    # noutro terminal, junto com npm run dev
+npm --prefix server run setup-env   # once: creates server/.env with the VAPID keys
+npm run dev:push                    # in another terminal, next to npm run dev
 ```
 
-O `dev:push` usa a porta `PUSH_SERVER_PORT` (3100 por padrão), aceita pedidos de `http://localhost:PORT` e guarda os dados em `server/data-dev`, separado dos dados de produção. Não é preciso editar o `server/.env`.
+`dev:push` listens on `PUSH_SERVER_PORT` (3100 by default), accepts requests from `http://localhost:PORT` and stores its data in `server/data-dev`, apart from production data. There is no need to edit `server/.env`.
 
-## Comandos
+## Commands
 
-- `npm run dev`: servidor de desenvolvimento.
-- `npm run dev:push`: servidor de push local para o `npm run dev`.
-- `npm run build`: bundle de produção em `dist/`.
-- `npm run preview`: serve o bundle de produção.
-- `npm test` / `npm run test:watch`: testes unitários (Vitest).
-- `npm run test:e2e`: testes end to end (Playwright). Na primeira vez rode `npx playwright install chromium`.
-- `npm run test:server`: testes do servidor de push (requer `npm run install:all`).
-- `npm run test:all`: testes do frontend e do servidor.
-- `npm run check`: lint, typecheck, todos os testes e build, na ordem.
-- `npm run typecheck`: verificação de tipos (TypeScript).
+- `npm run dev`: development server.
+- `npm run dev:push`: local push server for `npm run dev`.
+- `npm run build`: production bundle in `dist/`.
+- `npm run preview`: serves the production bundle.
+- `npm test` / `npm run test:watch`: unit tests (Vitest).
+- `npm run test:e2e`: end to end tests (Playwright). The first time, run `npx playwright install chromium`.
+- `npm run test:server`: push server tests (requires `npm run install:all`).
+- `npm run test:all`: frontend and server tests.
+- `npm run check`: lint, typecheck, every test and the build, in that order.
+- `npm run typecheck`: type checking (TypeScript).
 - `npm run lint` / `npm run lint:fix`: ESLint.
 - `npm run format` / `npm run format:check`: Prettier.
 
-## Estrutura
+## Structure
 
 ```text
 src/
-├── assets/       estilos e imagens
-├── components/   componentes reutilizáveis
-├── pages/        páginas e layouts de rota
-├── services/     cliente AniList, queries, hooks e lógica (TypeScript)
-└── test/         utilitários de teste e testes do service worker
-shared/           regras de lançamentos usadas pelo navegador e pelo servidor de push
-e2e/              testes Playwright
-server/           servidor de Web Push (Node)
-public/           manifest, service worker, ícones e .htaccess
-deploy/           vhost Nginx do CloudPanel
-scripts/          deploy e manutenção
+├── assets/       styles and images
+├── components/   reusable components
+├── pages/        pages and route layouts
+├── services/     AniList client, queries, hooks and logic (TypeScript)
+└── test/         test helpers and service worker tests
+shared/           release rules used by both the browser and the push server
+e2e/              Playwright tests
+server/           Web Push server (Node)
+public/           manifest, service worker, icons and .htaccess
+deploy/           CloudPanel Nginx vhost
+scripts/          deploy script
+docs/             README screenshot
 .github/          CI (GitHub Actions)
-design/           ficheiros PSD (ignorados pelo Git)
+design/           PSD files (ignored by Git)
 ```
 
 ## Deploy
 
-`scripts/deploy.sh` envia o projeto por SFTP (só os ficheiros alterados) e faz o build no servidor. O build é gerado numa pasta temporária e só substitui o `dist/` se correr bem, por isso um build falhado não afeta o site. Copie `scripts/.env.example` para `scripts/.env` e preencha.
+`scripts/deploy.sh` uploads the project over SFTP (changed files only) and builds it on the server. The build goes to a temporary folder and only replaces `dist/` when it succeeds, so a failed build never affects the live site. Copy `scripts/.env.example` to `scripts/.env` and fill it in.
 
 ```bash
-./scripts/deploy.sh               # envia, faz o build no servidor e reinicia o push
-./scripts/deploy.sh --check       # corre lint, tipos e testes localmente antes
-./scripts/deploy.sh --web-only    # não reinicia o servidor de push
-./scripts/deploy.sh --clean       # descarta os assets antigos de dist/assets
-./scripts/deploy.sh --full        # envia todos os ficheiros
-./scripts/deploy.sh --trust-host  # só na primeira vez: grava a chave SSH do servidor
+./scripts/deploy.sh               # upload, build on the server and restart the push server
+./scripts/deploy.sh --check       # run lint, types and tests locally first
+./scripts/deploy.sh --web-only    # do not restart the push server
+./scripts/deploy.sh --clean       # drop the old assets in dist/assets
+./scripts/deploy.sh --full        # upload every file
+./scripts/deploy.sh --trust-host  # first run only: record the server SSH key
 ```
 
-As dependências são instaladas com `npm ci`, nas versões exatas dos `package-lock.json` (o do `server/` também está no Git). Os assets antigos ficam disponíveis por `ASSET_RETENTION_DAYS` dias (30 por padrão) para as abas abertas antes do deploy e depois são apagados.
+Dependencies are installed with `npm ci`, at the exact versions of the `package-lock.json` files (the one in `server/` is in Git too). Assets from older deploys stay available for `ASSET_RETENTION_DAYS` days (30 by default) for tabs opened before the deploy, and are deleted afterwards.
 
-#### Chave SSH do servidor
+#### Server SSH key
 
-O deploy recusa servidores cuja chave SSH não conhece, para que ninguém no meio do caminho consiga capturar a senha. Na primeira vez:
+The deploy refuses servers whose SSH key it does not know, so nobody in the middle can capture the password. The first time:
 
-1. No servidor, veja a impressão digital: `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub`.
-2. Rode `./scripts/deploy.sh --trust-host` e confira se a impressão digital mostrada é a mesma.
+1. On the server, print the fingerprint: `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub`.
+2. Run `./scripts/deploy.sh --trust-host` and check that the printed fingerprint is the same.
 
-A chave fica em `scripts/.known_hosts` (ignorado pelo Git). Em alternativa, defina `WEB_HOST_FINGERPRINT=SHA256:...` no `scripts/.env`.
+The key is stored in `scripts/.known_hosts` (ignored by Git). Alternatively, set `WEB_HOST_FINGERPRINT=SHA256:...` in `scripts/.env`. A key already in your `~/.ssh/known_hosts` is accepted as well.
 
-### Servidor web
+### Web server
 
-- Nginx (CloudPanel): cole `deploy/nginx-aotd.conf` no Vhost do site. O Nginx serve o build diretamente da pasta raiz do site, com fallback de SPA, cabeçalhos de segurança e cache certa para cada tipo de ficheiro. A porta da app Node.js do site fica para o servidor de push, em `/api/push/`, com limite de 30 pedidos por minuto por IP (rajadas de até 20).
-- Apache ou LiteSpeed: o `public/.htaccess` já vai no build, com os mesmos cabeçalhos.
+- Nginx (CloudPanel): paste `deploy/nginx-aotd.conf` into the site Vhost. Nginx serves the build straight from the site root folder, with the SPA fallback, security headers and the right caching for each file type. The Node.js app port of the site is used by the push server, under `/api/push/`, limited to 30 requests per minute per IP (bursts of up to 20).
+- Apache or LiteSpeed: `public/.htaccess` ships with the build, with the same headers.
 
-### Servidor de push
+### Push server
 
-Corre no pm2 como `aotd`, na porta 7115 (a mesma do `proxy_pass` do vhost), com o Node 22 que o deploy carrega via nvm.
+It runs in pm2 as `aotd`, on port 7115 (the same as the vhost `proxy_pass`), with the Node.js version the deploy loads through nvm (`NODE_VERSION`, 22.22 by default).
 
-O `COMMAND` do `scripts/.env` faz tudo a cada deploy: `npm ci` em `server/`, `npm run setup-env` e recria o processo no pm2. O `setup-env` cria o `server/.env` a partir do `server/.env.example` no primeiro deploy, com um par de chaves VAPID novo, e depois nunca o altera (trocar as chaves invalidaria as inscrições dos navegadores).
+`COMMAND` in `scripts/.env` does everything on each deploy: `npm ci` in `server/`, `npm run setup-env` and recreating the pm2 process. `setup-env` creates `server/.env` from `server/.env.example` on the first deploy, with a new VAPID key pair, and never changes it afterwards (new keys would invalidate every browser subscription).
 
-Para o pm2 arrancar com o servidor, rode `pm2 startup` uma vez no servidor e siga a instrução que ele mostra.
+To start pm2 with the server, run `pm2 startup` once on the server and follow the instruction it prints.
 
-Sem o servidor de push, as notificações continuam a funcionar enquanto o site estiver aberto numa aba.
+Without the push server, notifications keep working while the site is open in a tab.
 
-Proteções da API:
+API protections:
 
-- Só aceita inscrições cujo endpoint seja de um serviço de push real (Google, Mozilla, Microsoft e Apple), por isso o servidor nunca envia pedidos para outros hosts.
-- `POST` e `DELETE` exigem o cabeçalho `Origin` de um site em `ALLOWED_ORIGIN` (lista separada por vírgulas).
-- Por IP: 60 pedidos a cada 10 minutos e 10 inscrições novas por hora, além do limite do Nginx.
-- Uma notificação só é marcada como enviada depois de entregue; falhas temporárias são repetidas a cada minuto, sem repetir para quem já recebeu.
-- Quando o navegador troca a inscrição (`pushsubscriptionchange`), o service worker envia a nova junto com a antiga e o servidor transfere os favoritos.
+- Only subscriptions whose endpoint belongs to a real push service (Google, Mozilla, Microsoft and Apple) are accepted, so the server never sends requests to other hosts.
+- `POST` and `DELETE` require the `Origin` header of a site listed in `ALLOWED_ORIGIN` (comma separated).
+- Per IP: 60 requests every 10 minutes and 10 new subscriptions per hour, on top of the Nginx limit.
+- A notification is only marked as sent after it was delivered; temporary failures are retried every minute, without repeating it for browsers that already got it.
+- When the browser replaces the subscription (`pushsubscriptionchange`), the service worker sends the new one together with the old one and the server moves the favorites over.
 
-## Integração contínua
+## Continuous integration
 
-`.github/workflows/ci.yml` corre em cada push e pull request: lint, Prettier, tipos, testes do frontend e do servidor, build e, depois, os testes Playwright.
+`.github/workflows/ci.yml` runs on every push and pull request: lint, Prettier, types, frontend and server tests, the build and then the Playwright tests. It never deploys; deploys are always run by hand with `scripts/deploy.sh`.
 
-### Limpar o histórico do Git
+## Data and security
 
-Os PSDs antigos ainda ocupam espaço no histórico. `scripts/purge-psd-history.sh` remove-os com `git filter-repo`, depois de criar um backup. Isto reescreve o histórico e exige `git push --force-with-lease`, por isso só deve ser corrido de propósito.
-
-## Dados e segurança
-
-Os dados são fornecidos pela [AniList GraphQL API](https://anilist.co/graphiql). HTML vindo da API é sanitizado com DOMPurify, URLs externas são limitadas a HTTP/HTTPS e conteúdo adulto é filtrado. Os pedidos repetem só em falhas de rede, timeouts (15 s por tentativa), erros 5xx e 429 (respeitando o `Retry-After`). Quando a AniList não responde, a página mostra a última cópia guardada, com um aviso da data em que foi guardada.
+Data comes from the [AniList GraphQL API](https://anilist.co/graphiql). HTML from the API is sanitized with DOMPurify, external URLs are limited to HTTP/HTTPS and adult content is filtered out. Requests are only retried on network failures, timeouts (15 s per attempt), 5xx errors and 429 (honouring `Retry-After`). When AniList does not answer, the page shows the last saved copy, with a notice of when it was saved.
 
 ## Stack
 
-React 19, React Router 7, TypeScript, Sass, Vite, Vitest, Playwright, ESLint e Prettier.
+React 19, React Router 7, TypeScript, Sass, Vite, Vitest, Playwright, ESLint and Prettier.

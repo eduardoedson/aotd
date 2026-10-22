@@ -1,13 +1,13 @@
 // Minimal GraphQL client for AniList with retries. It replaces Apollo Client,
 // which was most of the bundle while the app only runs a handful of queries.
 
-export const ANILIST_URL = 'https://graphql.anilist.co';
+const ANILIST_URL = 'https://graphql.anilist.co';
 
 const MAX_ATTEMPTS = 3;
 const MAX_DELAY_MS = 8000;
 const MAX_RETRY_AFTER_MS = 60000;
 // A request that hangs longer than this is aborted and retried like a timeout.
-export const REQUEST_TIMEOUT_MS = 15000;
+const REQUEST_TIMEOUT_MS = 15000;
 const TIMEOUT_STATUS = 408;
 const RETRYABLE_STATUS = new Set([408, 425, 429, 500, 502, 503, 504]);
 

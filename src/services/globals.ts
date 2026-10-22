@@ -57,7 +57,7 @@ const parseIso = (isoDate: string) => {
 };
 
 // Formats a Date as YYYY-MM-DD using its UTC calendar day.
-export const toIsoDate = (date: Date) =>
+const toIsoDate = (date: Date) =>
   `${date.getUTCFullYear()}-${pad2(date.getUTCMonth() + 1)}-${pad2(date.getUTCDate())}`;
 
 // Formats a local Date (for example one picked in a date input) as YYYY-MM-DD.
@@ -186,7 +186,7 @@ export const getSafeExternalUrl = (value: string | null | undefined) => {
   }
 };
 
-export const capitalizeFirstLetter = (str: string) =>
+const capitalizeFirstLetter = (str: string) =>
   str.toLowerCase().replace(/\b\w/g, (match) => match.toUpperCase());
 
 // Turns AniList enum values like NOT_YET_RELEASED into "Not Yet Released".

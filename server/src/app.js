@@ -2,8 +2,8 @@
 // create it with an in memory store and call it without opening a port.
 
 export const MAX_BODY_BYTES = 16 * 1024;
-export const MAX_MEDIA_IDS = 500;
-export const MAX_SUBSCRIPTIONS = 50000;
+const MAX_MEDIA_IDS = 500;
+const MAX_SUBSCRIPTIONS = 50000;
 
 // Push services of the browsers AOTD supports. Subscriptions pointing anywhere
 // else are refused, so the server never sends requests to arbitrary hosts.
@@ -38,7 +38,7 @@ const isValidKeys = (keys) =>
   keys.auth.length > 0 &&
   keys.auth.length <= 100;
 
-export const sanitizeIds = (value) =>
+const sanitizeIds = (value) =>
   Array.isArray(value)
     ? [...new Set(value.filter((id) => Number.isInteger(id) && id > 0))].slice(0, MAX_MEDIA_IDS)
     : null;

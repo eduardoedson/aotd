@@ -10,8 +10,6 @@ import {
   mergeNextEpisodes,
 } from '../../shared/releaseTracker.js';
 
-export { MAX_LATE_NOTIFICATION_MS };
-
 const ANILIST_URL = 'https://graphql.anilist.co';
 const REQUEST_TIMEOUT_MS = 15000;
 const MAX_ATTEMPTS = 3;
@@ -70,11 +68,11 @@ export function findReleases(tracker, now) {
 }
 
 // 404 and 410 mean the browser dropped the subscription for good.
-export const isGoneError = (error) => error?.statusCode === 404 || error?.statusCode === 410;
+const isGoneError = (error) => error?.statusCode === 404 || error?.statusCode === 410;
 
 // Network errors, rate limits and server errors are worth another attempt. Any
 // other client error (bad payload, wrong VAPID keys) would fail again.
-export const isTransientError = (error) => {
+const isTransientError = (error) => {
   const status = error?.statusCode;
   return typeof status !== 'number' || status === 429 || status >= 500;
 };

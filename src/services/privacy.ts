@@ -2,7 +2,7 @@
 
 import { createMemoryStore, createStorageStore } from './storage';
 
-export const GA_MEASUREMENT_ID = 'G-YW52CBSH4K';
+const GA_MEASUREMENT_ID = 'G-YW52CBSH4K';
 
 export interface ConsentChoice {
   analytics: boolean;
@@ -26,7 +26,7 @@ function gtag(..._args: unknown[]) {
   target.dataLayer.push(arguments);
 }
 
-export function loadAnalytics() {
+function loadAnalytics() {
   if (analyticsLoaded || typeof document === 'undefined') return;
   analyticsLoaded = true;
   const target = window as GtagWindow;

@@ -30,7 +30,7 @@ const channelLuminance = (channel: number) => {
   return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
 };
 
-export function relativeLuminance(rgb: Rgb) {
+function relativeLuminance(rgb: Rgb) {
   const [r, g, b] = rgb.map(channelLuminance);
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }

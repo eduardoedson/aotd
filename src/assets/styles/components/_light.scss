@@ -128,57 +128,6 @@ html[data-theme='light'] {
     background: $surface;
   }
 
-  .react-datepicker {
-    border-color: $line;
-    background: $surface;
-    color: $ink;
-  }
-
-  .react-datepicker__header {
-    border-bottom-color: $line;
-    background: linear-gradient(180deg, rgba($pink, 0.1), transparent);
-  }
-
-  .react-datepicker__current-month,
-  .react-datepicker__day:hover,
-  .react-datepicker__today-button:hover {
-    color: $ink-strong;
-  }
-
-  .react-datepicker__day-name {
-    color: $faint;
-  }
-
-  .react-datepicker__day {
-    color: $ink;
-
-    &:hover {
-      background: $surface-tint;
-    }
-  }
-
-  .react-datepicker__day--outside-month {
-    color: rgba(22, 34, 53, 0.3);
-  }
-
-  .react-datepicker__day--selected,
-  .react-datepicker__day--keyboard-selected {
-    color: #fff;
-  }
-
-  .react-datepicker__navigation {
-    border-color: $line;
-    background: $surface-tint;
-  }
-
-  .react-datepicker__navigation-icon::before {
-    border-color: $muted;
-  }
-
-  .react-datepicker__today-button {
-    border-top-color: $line;
-  }
-
   .day-load-more,
   .day-retry,
   .day-next {

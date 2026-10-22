@@ -9,7 +9,7 @@ export interface Preferences {
 }
 
 const defaults: Preferences = { theme: 'dark', density: 'comfortable' };
-export const preferencesStore = createStorageStore<Preferences>('aotd:preferences', defaults);
+const preferencesStore = createStorageStore<Preferences>('aotd:preferences', defaults);
 
 export function usePreferences() {
   const value = preferencesStore.useValue();

@@ -3,7 +3,7 @@
 
 import { createStorageStore } from './storage';
 
-export const PUSH_API = '/api/push';
+const PUSH_API = '/api/push';
 // Shared with public/sw.js: the service worker reads the current endpoint here
 // when the browser replaces the subscription without telling it the old one.
 const META_CACHE = 'aotd-meta';

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAnilistQuery } from './useAnilistQuery';
 
-export const SEARCH_QUERY = /* GraphQL */ `
+const SEARCH_QUERY = /* GraphQL */ `
   query SearchAnime($search: String, $perPage: Int) {
     Page(perPage: $perPage) {
       media(search: $search, type: ANIME, sort: [SEARCH_MATCH, POPULARITY_DESC]) {
@@ -49,7 +49,7 @@ const SEARCH_DELAY_MS = 350;
 const PER_PAGE = 12;
 
 // Returns the value only after it stopped changing for "delay" milliseconds.
-export function useDebouncedValue<T>(value: T, delay = SEARCH_DELAY_MS) {
+function useDebouncedValue<T>(value: T, delay = SEARCH_DELAY_MS) {
   const [debounced, setDebounced] = useState(value);
   useEffect(() => {
     const timer = setTimeout(() => setDebounced(value), delay);

@@ -6,7 +6,7 @@ import { pruneMap } from './boundedCache';
 import { getRange, shiftIsoDate, type TimeZoneMode, type UnixRange } from './globals';
 import { SCHEDULE_QUERY, type AiringItem, type ScheduleResponse } from './queries';
 
-export const PER_PAGE = 50;
+const PER_PAGE = 50;
 const CACHE_TTL_MS = 10 * 60 * 1000;
 // Enough for a few weeks of browsing back and forth, without growing forever.
 const MAX_CACHED_PAGES = 120;
@@ -24,8 +24,6 @@ interface PageResult {
 const pageCache = new Map<string, { promise: Promise<PageResult>; fetchedAt: number }>();
 // Remembers how many pages were loaded per range so coming back restores the list.
 const loadedPagesByRange = new Map<string, number>();
-
-export const getSchedulePageCacheSize = () => pageCache.size;
 
 export const clearScheduleCache = () => {
   pageCache.clear();
@@ -47,7 +45,7 @@ const toResult = (data: ScheduleResponse): PageResult => ({
   hasNextPage: Boolean(data?.Page?.pageInfo?.hasNextPage),
 });
 
-export function fetchSchedulePage(range: UnixRange, page: number): Promise<PageResult> {
+function fetchSchedulePage(range: UnixRange, page: number): Promise<PageResult> {
   const key = `${rangeKey(range)}:${page}`;
   const cached = pageCache.get(key);
   if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) return cached.promise;

@@ -39,11 +39,10 @@ export type Notify = (
   options: NotificationOptions & { data?: { url: string } },
 ) => void;
 
-export const notifySettingStore = createStorageStore<boolean>('aotd:notify', false);
+const notifySettingStore = createStorageStore<boolean>('aotd:notify', false);
 export const releaseTrackerStore = createStorageStore<ReleaseTracker>('aotd:release-tracker', {});
 
-export const isNotificationSupported = () =>
-  typeof window !== 'undefined' && 'Notification' in window;
+const isNotificationSupported = () => typeof window !== 'undefined' && 'Notification' in window;
 
 const permissionListeners = new Set<() => void>();
 const emitPermissionChange = () => permissionListeners.forEach((listener) => listener());

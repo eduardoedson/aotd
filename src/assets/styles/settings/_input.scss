@@ -1,14 +1,5 @@
 @use './variables' as *;
 
-.input-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  margin: 0.5rem;
-  width: 100%;
-  max-width: 20rem;
-}
-
 label {
   margin-bottom: 0.25em;
   text-transform: uppercase;

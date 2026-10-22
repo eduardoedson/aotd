@@ -44,5 +44,3 @@ export function prefetchIntent(mediaId: number) {
     onTouchStart: () => prefetchDetail(mediaId),
   };
 }
-
-export const resetPrefetch = () => prefetched.clear();
