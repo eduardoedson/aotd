@@ -20,6 +20,10 @@ export default defineConfig(({ mode }) => {
       environment: 'jsdom',
       setupFiles: './src/setupTests.js',
       include: ['src/**/*.test.{js,jsx,ts,tsx}'],
+      // One jsdom per worker instead of one per file, still isolated per file.
+      pool: 'vmThreads',
+      // Leaves CPU for jsdom work, which keeps timing sensitive tests stable.
+      maxWorkers: '50%',
     },
   };
 });

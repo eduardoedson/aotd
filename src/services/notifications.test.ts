@@ -73,4 +73,27 @@ describe('release notifications', () => {
     expect(client.query).toHaveBeenCalledWith([1]);
     expect(releaseTrackerStore.get()[1]).toMatchObject({ episode: 6, notified: false });
   });
+
+  it('tracks favorites beyond the first 50 by querying in batches', async () => {
+    const ids = Array.from({ length: 120 }, (_, index) => index + 1);
+    favoritesStore.set(Object.fromEntries(ids.map((id) => [id, { id, title: `Anime ${id}` }])));
+    const client = {
+      query: vi.fn(async (batch: number[]) => ({
+        Page: {
+          media: batch.map((id) => ({
+            id,
+            title: { userPreferred: `Anime ${id}` },
+            coverImage: null,
+            nextAiringEpisode: { episode: 2, airingAt: seconds(NOW + 3600000) },
+          })),
+        },
+      })),
+    };
+
+    await refreshReleaseTracker(client, NOW, vi.fn());
+
+    expect(client.query.mock.calls.map(([batch]) => batch.length)).toEqual([50, 50, 20]);
+    expect(Object.keys(releaseTrackerStore.get())).toHaveLength(120);
+    expect(releaseTrackerStore.get()[120]).toMatchObject({ episode: 2, notified: false });
+  });
 });

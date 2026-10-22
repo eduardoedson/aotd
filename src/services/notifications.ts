@@ -19,6 +19,8 @@ const PUSH_SYNC_DELAY_MS = 1500;
 // Releases older than this are marked as seen without a notification.
 const MAX_LATE_NOTIFICATION_MS = 3 * 24 * 60 * 60 * 1000;
 const DEFAULT_ICON = '/icons/icon-192.png';
+// AniList returns at most 50 media per page, so larger lists are queried in batches.
+const QUERY_BATCH_SIZE = 50;
 
 export interface TrackedRelease {
   episode: number;
@@ -152,8 +154,23 @@ interface QueryClient {
 
 const defaultClient: QueryClient = {
   query: (ids) =>
-    anilistRequest<FavoriteEpisodesResponse>(FAVORITE_EPISODES_QUERY, { ids, perPage: 50 }),
+    anilistRequest<FavoriteEpisodesResponse>(FAVORITE_EPISODES_QUERY, {
+      ids,
+      perPage: QUERY_BATCH_SIZE,
+    }),
 };
+
+type FavoriteMedia = NonNullable<FavoriteEpisodesResponse['Page']>['media'][number];
+
+// Queries every id, one batch after the other to stay gentle with the AniList rate limit.
+async function fetchFavoriteMedia(client: QueryClient, ids: number[]) {
+  const media: FavoriteMedia[] = [];
+  for (let index = 0; index < ids.length; index += QUERY_BATCH_SIZE) {
+    const data = await client.query(ids.slice(index, index + QUERY_BATCH_SIZE));
+    media.push(...(data?.Page?.media ?? []));
+  }
+  return media;
+}
 
 // Fetches the next episode of every favorite and stores it in the release tracker.
 export async function refreshReleaseTracker(
@@ -165,10 +182,10 @@ export async function refreshReleaseTracker(
   checkReleases(now, notify);
   if (ids.length === 0) return;
 
-  const data = await client.query(ids.slice(0, 50));
+  const mediaList = await fetchFavoriteMedia(client, ids);
   const tracker: ReleaseTracker = { ...(releaseTrackerStore.get() ?? {}) };
 
-  (data?.Page?.media ?? []).forEach((media) => {
+  mediaList.forEach((media) => {
     const upcoming = media.nextAiringEpisode;
     const previous = tracker[media.id];
     if (!upcoming) {

@@ -1,7 +1,14 @@
 import http from 'node:http';
 import webpush from 'web-push';
 import { createStore } from './store.js';
-import { collectMediaIds, fetchNextEpisodes, findReleases, updateTracker } from './releases.js';
+import {
+  applyDeliveries,
+  collectMediaIds,
+  deliverReleases,
+  fetchNextEpisodes,
+  findReleases,
+  updateTracker,
+} from './releases.js';
 
 const {
   PORT = '7115',
@@ -119,34 +126,40 @@ async function handle(request, response) {
   return sendJson(response, 405, { error: 'Method not allowed' });
 }
 
-async function sendReleases(now = Date.now()) {
-  const { releases, tracker } = findReleases(store.data.tracker, now);
-  if (releases.length === 0) return;
-  await store.setTracker(tracker);
+const sendPush = (subscription, payload) =>
+  webpush.sendNotification(subscription, JSON.stringify(payload), { TTL: 6 * 60 * 60 });
 
-  const deliveries = [];
-  Object.values(store.data.subscriptions).forEach((entry) => {
-    releases
-      .filter((release) => entry.mediaIds.includes(release.mediaId))
-      .forEach((release) => {
-        deliveries.push(
-          webpush
-            .sendNotification(entry.subscription, JSON.stringify(release.payload), {
-              TTL: 6 * 60 * 60,
-            })
-            .catch((error) => {
-              // 404 and 410 mean the browser dropped the subscription.
-              if (error.statusCode === 404 || error.statusCode === 410) {
-                return store.removeSubscription(entry.subscription.endpoint);
-              }
-              console.error('Push delivery failed', error.statusCode ?? error.message);
-              return undefined;
-            }),
-        );
-      });
+// A release is only marked as sent after every follower received it. Transient
+// failures stay pending and are retried on the next check, while the delivery
+// log on each subscription keeps a retry from notifying the same browser twice.
+async function runReleaseDelivery(now) {
+  const { releases, tracker, changed } = findReleases(store.data.tracker, now);
+  if (changed) await store.setTracker(tracker);
+  if (releases.length === 0) return;
+
+  const result = await deliverReleases(releases, store.data.subscriptions, sendPush);
+  await store.update((data) => applyDeliveries(data, result, Date.now()));
+
+  result.failures.forEach((failure) => {
+    console.error('Push delivery failed', failure.status, failure.tag);
   });
-  await Promise.all(deliveries);
-  console.log(`Sent ${deliveries.length} notification(s) for ${releases.length} release(s)`);
+  const pending = releases.length - result.completed.length;
+  const sent = result.attempted - result.failures.length - result.gone.length;
+  console.log(
+    `Sent ${sent} of ${result.attempted} notification(s) for ` +
+      `${releases.length} release(s), ${pending} pending retry, ${result.gone.length} expired`,
+  );
+}
+
+// Runs never overlap: a check that starts while one is still sending waits for it.
+let releaseRun = null;
+function sendReleases(now = Date.now()) {
+  if (!releaseRun) {
+    releaseRun = runReleaseDelivery(now).finally(() => {
+      releaseRun = null;
+    });
+  }
+  return releaseRun;
 }
 
 async function refreshTracker(now = Date.now()) {

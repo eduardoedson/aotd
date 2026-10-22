@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import Detail from './Detail';
@@ -91,7 +91,8 @@ describe('Detail', () => {
       'href',
       '/2026-10-21',
     );
-    expect(document.title).toBe('Sousou no Frieren :: AOTD');
+    // The title is set in an effect, which may run a moment after the heading appears.
+    await waitFor(() => expect(document.title).toBe('Sousou no Frieren :: AOTD'));
   });
 
   it('copies the link when the share sheet is not available', async () => {

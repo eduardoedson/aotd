@@ -29,9 +29,11 @@ Calendário web de lançamentos de anime. O aplicativo consulta a API GraphQL do
 ## Desenvolvimento
 
 ```bash
-npm install
+npm run install:all
 npm run dev
 ```
+
+O `install:all` instala as dependências do frontend e do servidor de push (`server/`), que tem o seu próprio `package.json`. Um `npm install` simples na raiz não instala `server/node_modules`, e os testes do servidor falham sem o `web-push`.
 
 Por padrão, o servidor abre em `http://localhost:7115`. Copie `.env.example` para `.env` para mudar a porta ou configurar o Sentry.
 
@@ -48,7 +50,9 @@ Por padrão, o servidor abre em `http://localhost:7115`. Copie `.env.example` pa
 - `npm run preview`: serve o bundle de produção.
 - `npm test` / `npm run test:watch`: testes unitários (Vitest).
 - `npm run test:e2e`: testes end to end (Playwright). Na primeira vez rode `npx playwright install chromium`.
-- `npm run test:server`: testes do servidor de push.
+- `npm run test:server`: testes do servidor de push (requer `npm run install:all`).
+- `npm run test:all`: testes do frontend e do servidor.
+- `npm run check`: lint, typecheck, todos os testes e build, na ordem.
 - `npm run typecheck`: verificação de tipos (TypeScript).
 - `npm run lint` / `npm run lint:fix`: ESLint.
 - `npm run format` / `npm run format:check`: Prettier.

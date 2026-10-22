@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { anilistRequest } from './anilist';
-import { readPersistent, writePersistent } from './persistentCache';
+import { peekPersistent, readPersistent, writePersistent } from './persistentCache';
 
 const CACHE_TTL_MS = 10 * 60 * 1000;
 // Detail data changes rarely: a persisted copy is reused for 30 minutes and is
@@ -61,13 +61,17 @@ export function cachedRequest<T>(query: string, variables: Record<string, unknow
   return entry.promise as Promise<T>;
 }
 
+// Reads already available data without side effects, so it can run during render.
 const readCached = <T>(query: string, variables: Record<string, unknown>) => {
   const cached = cache.get(cacheKey(query, variables));
   if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS && cached.data !== undefined) {
     return cached.data as T;
   }
-  return readPersistent<T>(persistKey(query, variables), PERSIST_FRESH_MS);
+  return peekPersistent<T>(persistKey(query, variables), PERSIST_FRESH_MS);
 };
+
+const variablesFromKey = (key: string) =>
+  JSON.parse(key.slice(key.indexOf('::') + 2)) as Record<string, unknown>;
 
 interface QueryState<T> {
   key: string;
@@ -81,29 +85,25 @@ export function useAnilistQuery<T>(
   { skip = false }: { skip?: boolean } = {},
 ) {
   const key = cacheKey(query, variables);
-  const [state, setState] = useState<QueryState<T>>(() => ({
-    key,
-    data: skip ? undefined : readCached<T>(query, variables),
-    error: null,
-  }));
+  // Holds the last finished request. It belongs to one key only, so results of
+  // other variables are ignored below instead of being reset during render.
+  const [settled, setSettled] = useState<QueryState<T> | null>(null);
 
-  // Reset synchronously when the variables change, so stale data is never shown.
-  let current = state;
-  if (state.key !== key) {
-    current = { key, data: skip ? undefined : readCached<T>(query, variables), error: null };
-    setState(current);
-  }
+  // Data already in the caches for the current key, shown until the request ends.
+  const cachedData = useMemo(
+    () => (skip ? undefined : readCached<T>(query, variablesFromKey(key))),
+    [query, key, skip],
+  );
 
   useEffect(() => {
     if (skip) return undefined;
     let cancelled = false;
-    const vars = JSON.parse(key.slice(key.indexOf('::') + 2)) as Record<string, unknown>;
-    cachedRequest<T>(query, vars).then(
+    cachedRequest<T>(query, variablesFromKey(key)).then(
       (data) => {
-        if (!cancelled) setState({ key, data, error: null });
+        if (!cancelled) setSettled({ key, data, error: null });
       },
       (error: unknown) => {
-        if (!cancelled) setState({ key, data: undefined, error });
+        if (!cancelled) setSettled({ key, data: undefined, error });
       },
     );
     return () => {
@@ -111,10 +111,12 @@ export function useAnilistQuery<T>(
     };
   }, [query, key, skip]);
 
-  const ready = current.key === key;
+  if (skip) return { data: undefined, error: null, loading: false };
+
+  const current = settled?.key === key ? settled : { key, data: cachedData, error: null };
   return {
-    data: ready ? current.data : undefined,
-    error: ready ? current.error : null,
-    loading: !skip && (!ready || (current.data === undefined && !current.error)),
+    data: current.data,
+    error: current.error,
+    loading: current.data === undefined && !current.error,
   };
 }
