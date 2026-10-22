@@ -2,7 +2,7 @@
 
 Calendário web de lançamentos de anime. O aplicativo consulta a API GraphQL do AniList, lista os episódios programados para cada dia e apresenta detalhes das obras.
 
-![AOTD](https://github.com/user-attachments/assets/a8f6646f-1f1e-4f3e-b961-f9aab3083720)
+![AOTD: agenda diária de anime](docs/screenshot.webp)
 
 ## Funcionalidades
 
